@@ -1,0 +1,14 @@
+.work/
+__pycache__/
+*.py[cod]
+*.so
+*.so.new
+*.log
+.venv/
+venv/
+*.tar.gz
+*.tar.gz.sha256
+.git/
+
+# Generated test media
+/kdeglance/examples/
