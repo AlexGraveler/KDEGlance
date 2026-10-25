@@ -111,7 +111,6 @@ kdeglance state
 | Drag zoomed image/video | Pan content; fitted content/window dragging follows existing viewer rules |
 | Drag window; Alt-drag | Move preview using the compositor |
 | 0 or F | Fit an image to the window; F toggles video fullscreen |
-| Video double click | Toggle fullscreen |
 | Play/pause button | Toggle audio/video playback |
 | Click/drag progress bar | Seek audio/video |
 | Wheel on progress bar | Seek by one second per wheel step |
