@@ -16,7 +16,7 @@ depends=(
 # gcc and pkgconf are supplied by base-devel, as required for AUR builds.
 makedepends=('desktop-file-utils')
 source=(
-  "KDEGlance-$pkgver.tar.gz"
+  "KDEGlance-$pkgver.tar.gz::https://github.com/AlexGraveler/KDEGlance/releases/download/v$pkgver/KDEGlance-$pkgver.tar.gz"
   'kdeglance' 'kdeglance-setup' 'package_launch.py' 'package_support.py' 'user_setup.py'
   'kdeglance2.service' 'io.github.KDEGlance2.service' 'io.github.KDEGlance2.desktop'
   'kdeglance-space-probe.desktop' 'AUR-INSTALL.md' 'NOTICES.md' 'check_package.py'
