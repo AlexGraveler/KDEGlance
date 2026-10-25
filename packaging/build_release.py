@@ -8,7 +8,7 @@ from pathlib import Path
 import tarfile
 from distribution import ROOT,archive_files
 VERSION=(ROOT/'VERSION').read_text().strip()
-assert VERSION=='1.0.0'
+assert VERSION=='1.0.1'
 files=archive_files()
 archive=ROOT/('KDEGlance-'+VERSION+'.tar.gz')
 with archive.open('wb') as destination:

@@ -1,24 +1,20 @@
-# KDEGlance v1.0.0
+# KDEGlance v1.0.1 — local release candidate
 
-First public release of KDEGlance, a Quick Look-style previewer for
-KDE Plasma and Dolphin, targeting CachyOS / Arch Linux with Plasma 6 on Wayland.
+This maintenance release preserves image/GIF/audio/video rendering and controls.
+It fixes migration diagnostics and retired experimental menu handling.
 
-Highlights: image/GIF/HEIC/CR2 previews, zoom/pan and view-only transforms; audio
-with embedded covers and a glass placeholder; video controls/rotation/fullscreen;
-mixed-folder navigation with explicit Dolphin selection synchronization; white
-vector controls; user-only installation and removal.
+- Diagnose PATH shadowing by the old /usr/local/bin/kdeglance launcher. Packaged
+  --version and state accept no image path; --version works during migration.
+- Back up recognized retired log_selection.py menus, and avoid restoring them
+  to active Dolphin integration when uninstalling a manual installation.
+- Preserve unknown files, shortcuts, media preferences and existing backups.
+- Add CLI and migration regression tests, and local Arch/CachyOS packaging 1.0.1-1.
 
-Local files and file URLs are direct. SMB URLs use KIO Fuse. Universal KIO/AFC
-and physical iPhone previewing are not included. Fedora/Kubuntu are not officially
-supported by this release. Actual codecs depend on the system backend.
+KDEGlance-1.0.1.tar.gz is a minimal source/install archive with GPL-3.0-or-later
+and required notices. The local PKGBUILD consumes that real local archive and its
+computed SHA-256. No GitHub/AUR publication or live update is performed here.
+After owner approval and actual upload, a publisher may verify the remote asset
+and then change the AUR source URL; do not point it at an unpublished release.
 
-Download `KDEGlance-1.0.0.tar.gz` and verify it using the accompanying SHA-256 file.
-The minimal archive includes corresponding source, installation scripts and
-licenses; developer tests/screenshots/media stay in the repository.
-Extract, read its README.md, then run `bash install.sh` as your normal desktop user.
-Reopen Dolphin and assign Space manually. The installer does not overwrite
-keyboard shortcuts. The small native bridge is compiled on your machine.
-
-GPL-3.0-or-later; see LICENSE and THIRD_PARTY.md. This is an independent project,
-not an official KDE application. See TESTING.md for the
-actual automated runs and outstanding native/clean-machine checks.
+Read README.md/INSTALL.md and the package migration guide before replacing a
+manual installation. Native GUI acceptance of 1.0.1 remains a test-laptop step.

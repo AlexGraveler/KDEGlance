@@ -1,6 +1,7 @@
 # Screenshot provenance
 
-The five PNGs are captures of the actual 1.0.0 Qt widgets, made by
+The five PNGs were captured from the real 1.0.0 Qt widgets. The design is unchanged
+in 1.0.1; these original captures are retained. They were made by
 `tests/render_screenshots.py` using Qt's offscreen platform. The controls and
 placeholder are the application's own painting code; video comes from the real
 QMediaPlayer/QVideoSink. Controls are held visible for capture. These are not

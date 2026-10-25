@@ -40,7 +40,7 @@ class Tests(unittest.TestCase):
     def test_01_version_runtime_license_and_scripts(self):
         from core import VERSION
         from manage import RUNTIME
-        self.assertEqual(VERSION,'1.0.0');self.assertEqual((ROOT/'VERSION').read_text().strip(),VERSION)
+        self.assertEqual(VERSION,'1.0.1');self.assertEqual((ROOT/'VERSION').read_text().strip(),VERSION)
         self.assertIn('GNU GENERAL PUBLIC LICENSE',(ROOT/'LICENSE').read_text())
         self.assertFalse(set(check_env.PACKAGES) & {'desktop-file-utils','python-pillow','ffmpeg','libheif','pytest','git'})
         for name in RUNTIME:self.assertTrue((ROOT/'kdeglance'/name).exists(),name)
@@ -53,9 +53,9 @@ class Tests(unittest.TestCase):
         launcher.write_text(original)
         preferences=self.home/'config/kdeglance2/audio.ini';preferences.parent.mkdir(parents=True);preferences.write_text('[General]\nvolume=0.42\n')
         self.install();self.install()
-        state=json.loads(self.manifest.read_text());self.assertEqual(state['version'],'1.0.0')
+        state=json.loads(self.manifest.read_text());self.assertEqual(state['version'],'1.0.1')
         result=self.run_command(str(self.home/'.local/bin/kdeglance'),'--version')
-        self.assertEqual(result.returncode,0,result.stderr);self.assertEqual(result.stdout.strip(),'KDEGlance 1.0.0')
+        self.assertEqual(result.returncode,0,result.stderr);self.assertEqual(result.stdout.strip(),'KDEGlance 1.0.1')
         menu=(self.home/'data/kio/servicemenus/kdeglance-space-probe.desktop').read_text()
         self.assertIn('Actions=LogSelection;',menu);self.assertIn(' toggle -- %U',menu)
         self.assertEqual(launcher.read_text().count('QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1'),1)

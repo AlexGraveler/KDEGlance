@@ -1,4 +1,4 @@
-# Testing KDEGlance 1.0.0
+# Testing KDEGlance 1.0.1
 
 ## Automated checks
 
@@ -12,6 +12,7 @@ bash install.sh --check
 python3 -B tests/run_tests.py
 python3 -B tests/run_tests.py --gif
 python3 -B tests/run_packaging.py
+dbus-run-session -- python3 -B tests/test_preflight.py
 python3 -B tests/render_screenshots.py
 python3 -B tests/verify_release.py
 python3 -B packaging/build_release.py
@@ -64,7 +65,7 @@ been rerun against the owner's working installation during release preparation.
 
 1. On clean Arch/CachyOS Plasma Wayland, run the installer from a path containing
    spaces. Confirm missing packages are proposed, refusal leaves integration
-   untouched, and acceptance builds/starts version 1.0.0 without running as root.
+   untouched, and acceptance builds/starts version 1.0.1 without running as root.
 2. Reopen Dolphin, bind Space manually after reviewing conflicts, and preview
    JPEG/PNG/GIF/HEIC/CR2, audio with/without embedded art, and diverse video codecs.
 3. Navigate a mixed folder in Dolphin's visible sort order. Close and use arrows
@@ -86,7 +87,7 @@ Fedora/Kubuntu/X11 and universal AFC/iPhone KIO are outside this release scope.
 
 ## User archive
 
-`python3 -B packaging/build_release.py` creates KDEGlance-1.0.0.tar.gz plus its
+`python3 -B packaging/build_release.py` creates KDEGlance-1.0.1.tar.gz plus its
 SHA-256 sidecar from the explicit `packaging/distribution.py` allowlist. Run
 `tests/verify_release.py` separately to audit the repository.
 Only the explicit application/install/license allowlist is included. Tests,
@@ -97,3 +98,38 @@ extracted program; no media is added to the user archive.
 The archive has normalized ordering, ownership and timestamps; identical source
 bytes produce identical archive bytes. Media regeneration across codec versions
 is not claimed to be bit-identical.
+
+## Installer bootstrap regression checks
+
+`tests/test_preflight.py` runs the real `bash install.sh` with disposable HOME/XDG,
+a private D-Bus session, fake package-manager commands and import blockers. It
+covers missing PyQt6, missing Qt Wayland, both missing, and all packages present.
+Application imports are forbidden during preflight. Missing-runtime imports are
+blocked even though the development machine has Qt, reproducing the clean-machine
+failure without removing host packages. It also checks noninteractive refusal,
+TTY confirmation of the exact pacman command followed by rechecking/cancelling
+application installation, and graceful reporting of broken runtime imports.
+The fake sudo never calls real sudo or changes the host package database.
+
+## Staged Arch package checks
+
+After building the PKGBUILD in `.work/aur/build`, run
+`dbus-run-session -- python3 -B tests/test_aur.py`. It extracts the built package
+inside `.work/aur`, checks file layout/source bytes/native loading, migration
+using the unchanged manual manager, safe optional Dolphin setup, and private-bus
+offscreen image/audio/video decoding plus duplicate-daemon prevention. No pacman
+install/remove or native Dolphin/Wayland acceptance is performed. The exact
+secondary-laptop build/install/remove/update checklist is in
+[the package guide](packaging/aur/AUR-INSTALL.md).
+
+## 1.0.1 regression checks
+
+Run `python3 -B tests/test_legacy.py` after the native test build. It tests exact
+recognition, lossless/idempotent archiving, rejection of unknown commands/symlinks,
+concurrent changes, leftover cleanup without a manifest and not reactivating
+a retired original during uninstall. `tests/test_aur.py` also exercises actual
+shell CLI forwarding (--version/state), the confirmed PATH-shadowing failure,
+state without a D-Bus connection, version output during migration and the
+explicit packaged --archive-legacy-menu path. Tests relocate only the shell
+entry point's installation prefix into the extracted package; no /usr files
+are replaced and no packages are installed on the primary computer.

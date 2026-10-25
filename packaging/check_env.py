@@ -46,20 +46,23 @@ def probe(require_session=True, release_file=Path('/etc/os-release')):
             if version(package_version)<minimum:result['errors'].append(package+' is too old.')
     if sys.version_info<(3,10):result['errors'].append('Python 3.10 or newer is required.')
     result['info']['python']=sys.version.split()[0]
-    try:
-        from PyQt6.QtCore import QCoreApplication,QT_VERSION_STR,PYQT_VERSION_STR
-        from PyQt6.QtDBus import QDBusConnection
-        from PyQt6.QtGui import QImageReader
-        from PyQt6.QtMultimedia import QMediaPlayer
-        import gi
-        gi.require_version('Gio','2.0')
-        from gi.repository import Gio,GLib
-        _app=QCoreApplication.instance() or QCoreApplication(['kdeglance-check'])
-        result['info'].update(qt=QT_VERSION_STR,pyqt=PYQT_VERSION_STR)
-        if version(QT_VERSION_STR)<(6,8) or version(PYQT_VERSION_STR)<(6,8):result['errors'].append('Qt/PyQt 6.8 or newer is required.')
-        result['info']['image_formats']=sorted(bytes(x).decode() for x in QImageReader.supportedImageFormats())
-        if require_session and not QDBusConnection.sessionBus().isConnected():result['errors'].append('No graphical user D-Bus session is available.')
-    except (ImportError,ValueError) as error:result['errors'].append('Python/Qt/Gio check: '+str(error))
+    if result['missing']:
+        result['warnings'].append('Runtime import checks deferred until missing packages are installed.')
+    else:
+        try:
+            from PyQt6.QtCore import QCoreApplication,QT_VERSION_STR,PYQT_VERSION_STR
+            from PyQt6.QtDBus import QDBusConnection
+            from PyQt6.QtGui import QImageReader
+            from PyQt6.QtMultimedia import QMediaPlayer
+            import gi
+            gi.require_version('Gio','2.0')
+            from gi.repository import Gio,GLib
+            _app=QCoreApplication.instance() or QCoreApplication(['kdeglance-check'])
+            result['info'].update(qt=QT_VERSION_STR,pyqt=PYQT_VERSION_STR)
+            if version(QT_VERSION_STR)<(6,8) or version(PYQT_VERSION_STR)<(6,8):result['errors'].append('Qt/PyQt 6.8 or newer is required.')
+            result['info']['image_formats']=sorted(bytes(x).decode() for x in QImageReader.supportedImageFormats())
+            if require_session and not QDBusConnection.sessionBus().isConnected():result['errors'].append('No graphical user D-Bus session is available.')
+        except (ImportError,ValueError) as error:result['errors'].append('Python/Qt/Gio check: '+str(error))
     if require_session:
         if 'kde' not in os.environ.get('XDG_CURRENT_DESKTOP','').lower().split(':'):result['errors'].append('Run this installer in a KDE Plasma desktop session.')
         if os.environ.get('XDG_SESSION_TYPE')!='wayland' and not os.environ.get('WAYLAND_DISPLAY'):result['errors'].append('A Plasma Wayland session is required for the supported configuration.')
@@ -75,7 +78,7 @@ def probe(require_session=True, release_file=Path('/etc/os-release')):
     return result
 
 def show(result):
-    print('KDEGlance 1.0.0 — Arch Linux / CachyOS')
+    print('KDEGlance 1.0.1 — Arch Linux / CachyOS')
     for key,value in result['info'].items():print(str(key)+': '+str(value))
     if result['missing']:print('Missing packages: '+' '.join(result['missing']))
     for error in result['errors']:print('ERROR: '+error)

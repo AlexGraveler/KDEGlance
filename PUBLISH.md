@@ -1,4 +1,4 @@
-# Publishing v1.0.0 (owner action required)
+# Publishing v1.0.1 (owner action required)
 
 This preparation did not push, create a remote repository/release, or create a
 Git tag. The proposed remote is https://github.com/AlexGraveler/KDEGlance.
@@ -22,21 +22,27 @@ Remote availability/permissions must be checked by the owner when publishing.
    git add .
    git status
    git diff --cached --stat
-   git commit -m "Prepare KDEGlance 1.0.0"
+   git commit -m "Prepare KDEGlance 1.0.1"
    ```
 
 5. Only after final owner approval, create and publish the version tag:
 
    ```bash
-   git tag -a v1.0.0 -m "KDEGlance 1.0.0"
+   git tag -a v1.0.1 -m "KDEGlance 1.0.1"
    git push -u origin main
-   git push origin v1.0.0
+   git push origin v1.0.1
    ```
 
-6. Create a GitHub Release for v1.0.0, paste RELEASE-NOTES.md, and attach the
+6. Create a GitHub Release for v1.0.1, paste RELEASE-NOTES.md, and attach the
    minimal user tar.gz and its .sha256 file. The repository includes developer
    material separately; do not attach the old all-in-one source bundle. Verify
    the downloaded artifact checksum.
 
 The owner approved GPL-3.0-or-later during preparation. That license decision
 is not permission for this agent to publish or push anything.
+
+For 1.0.1, the PKGBUILD intentionally references a prepared LOCAL source archive.
+No remote 1.0.1 source is assumed to exist. First review and approve the release,
+upload it only with owner permission, then download the real public asset and
+verify its bytes/SHA-256 before changing the AUR source URL. Regenerate .SRCINFO
+after that change. Never invent a checksum or use SKIP for the release source.

@@ -1,4 +1,4 @@
-# KDEGlance 1.0.0
+# KDEGlance 1.0.1
 
 Quick Look-style image, audio and video previews for KDE Plasma and Dolphin.
 Supported setup: CachyOS / Arch Linux, Plasma 6 Wayland, Dolphin 24.02+,
@@ -20,6 +20,12 @@ activation bridge from the included source. It installs into your user account;
 do not run the whole installer with sudo. A compiler/pkg-config is required
 only for this local build, not for normal playback. No pip, test media, test
 framework, Git or Codex is needed.
+
+`--check` also works before PyQt6/Qt Wayland is installed: it prints missing
+packages and exits with status 1, without installing or changing anything.
+A successful complete check returns 0. Run without `--check` to approve package
+installation; the installer checks dependencies again afterward.
+
 
 It creates KDEGlance's user service, D-Bus activation and Dolphin action, and
 backs up a user Dolphin launcher to enable accessibility for file navigation.
@@ -59,4 +65,17 @@ https://github.com/AlexGraveler/KDEGlance
 
 Independent project; not an official KDE application. Format/codec availability
 depends on installed Qt plugins/backend. SMB uses KIO Fuse; universal KIO/AFC,
-PDF and text previews are outside version 1.0.0.
+PDF and text previews are outside version 1.0.1.
+
+## Migrating an older installation
+
+If `kdeglance --version` reports an image-path error, run `type -a kdeglance`.
+A retired /usr/local/bin launcher may shadow the package command. On a packaged
+installation, `/usr/bin/kdeglance --version` and `/usr/bin/kdeglance state` bypass
+that stale PATH entry. Review and back up only the confirmed old symlink; do not
+blindly remove /usr/local files. Refresh the shell with `hash -r` afterward.
+
+Version 1.0.1's manual uninstaller recognizes the retired log_selection.py Service
+Menu and preserves it in XDG state/kdeglance-migration instead of restoring it
+to Dolphin. An unrecognized/modified action is left untouched for manual review.
+Existing preferences, shortcuts and installer backups are retained by default.

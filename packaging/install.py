@@ -11,17 +11,19 @@ def confirm(message):
     return sys.stdin.isatty() and input(message+' [y/N] ').strip().lower() in ('y','yes')
 
 def main():
-    parser=argparse.ArgumentParser(description='User-level KDEGlance 1.0.0 installer')
+    parser=argparse.ArgumentParser(description='User-level KDEGlance 1.0.1 installer')
     parser.add_argument('--check',action='store_true',help='read-only requirements check')
     parser.add_argument('--test-isolated',action='store_true',help=argparse.SUPPRESS)
     args=parser.parse_args()
     if os.geteuid()==0:raise RuntimeError('Run as your normal desktop user, not root.')
     source=ROOT/'kdeglance'
     sys.path.insert(0,str(source))
-    from core import VERSION
-    from manage import validate_test_environment
-    if VERSION!='1.0.0' or (ROOT/'VERSION').read_text().strip()!=VERSION:raise RuntimeError('Release version mismatch.')
-    if args.test_isolated:validate_test_environment()
+    # Bootstrap must use only the standard library: core imports PyQt6.
+    VERSION=(ROOT/'VERSION').read_text().strip()
+    if VERSION!='1.0.1':raise RuntimeError('Release version mismatch.')
+    if args.test_isolated:
+        from manage import validate_test_environment
+        validate_test_environment()
     else:
         result=probe();show(result)
         if not result['supported']:return 1
@@ -56,5 +58,5 @@ def main():
 
 if __name__=='__main__':
     try:sys.exit(main())
-    except (RuntimeError,OSError,ValueError,subprocess.SubprocessError) as error:
+    except (RuntimeError,OSError,ValueError,ImportError,subprocess.SubprocessError) as error:
         print('KDEGlance installation: '+str(error),file=sys.stderr);sys.exit(1)

@@ -1,0 +1,74 @@
+# Maintainer: AlexGraveler (https://github.com/AlexGraveler)
+pkgname=kdeglance
+pkgver=1.0.1
+pkgrel=1
+pkgdesc='Quick Look-style file preview for KDE Plasma and Dolphin'
+arch=('x86_64')
+url='https://github.com/AlexGraveler/KDEGlance'
+license=('GPL-3.0-or-later')
+depends=(
+  'python>=3.10' 'python-pyqt6>=6.8' 'python-gobject' 'python-mutagen'
+  'qt6-base>=6.8' 'qt6-multimedia>=6.8' 'qt6-wayland>=6.8'
+  'qt6-imageformats' 'kimageformats' 'kwindowsystem' 'kservice'
+  'dolphin>=24.02' 'kio-fuse' 'kio-extras' 'at-spi2-core'
+  'glib2' 'dbus' 'systemd' 'plasma-workspace>=6' 'bash' 'libgcc' 'glibc'
+)
+# gcc and pkgconf are supplied by base-devel, as required for AUR builds.
+makedepends=('desktop-file-utils')
+source=(
+  "KDEGlance-$pkgver.tar.gz"
+  'kdeglance' 'kdeglance-setup' 'package_launch.py' 'package_support.py' 'user_setup.py'
+  'kdeglance2.service' 'io.github.KDEGlance2.service' 'io.github.KDEGlance2.desktop'
+  'kdeglance-space-probe.desktop' 'AUR-INSTALL.md' 'NOTICES.md' 'check_package.py'
+)
+sha256sums=(
+  '64920098e2a867ef19f5515224545a120ddc912000e9ed9da3b51aa1a4781e08'
+  '768c2a4c81f91d2213c77a2228f408a82d3256170598cbaa871bdb4bf3660fc6'
+  'f5f6707fbed4149823e8b94e776c7a8502e1cb860574421edc77a31184ef7d40'
+  'f5c8b7c594a8c57a464701cc941c3566eb1269b1a0164d45536544201c1ea5ca'
+  'f8fc4e015a3a007281087d089705170f2b031b9f7f688079766ab8cf9bae6353'
+  '9e8c36f6544335ff96e6e2d06d3689239a3194ddfaa665ff93db4998d4310aac'
+  '0c6e982ae7af30329a2bbdd0357f10b9c57fd6363f9cd2d5b4567e9b61bf87a9'
+  '296ee3553f45899ae5d3afd347124efd7a58802f1787e64d048ac5902f1cd223'
+  'ea2313c3fe0494c28b1ab7f11134aefe71e118be663b618429d0d35ec0a69451'
+  'c97511a818cfe1ff7116de77cb937204cc3363c036e25e03ca84ccbc8d180bab'
+  'e50aac80724e4aa7ceb003b91af594405625cf96de89798170b39a9ca8e5f55a'
+  '57bf526b154c3d0efd7fa137f12ed1a4d1039f48cc2ceca3321b03a1c4a5d9b8'
+  '68b97133d8e13362e334587baf57f081e790a6caeff853ceed548e48ccce9537'
+)
+
+build() {
+  cd "$srcdir/KDEGlance-$pkgver/kdeglance"
+  # Honor makepkg hardening/optimization/link flags; no prebuilt developer .so.
+  ${CXX:-g++} $CPPFLAGS $CXXFLAGS -std=c++20 -fPIC -shared native.cpp \
+    $LDFLAGS -o libkdeglance_native.so $(pkg-config --cflags --libs 'Qt6Gui >= 6.8' 'KF6WindowSystem >= 6.0')
+}
+
+check() {
+  python -B "$srcdir/check_package.py" "$srcdir"
+  desktop-file-validate "$srcdir/io.github.KDEGlance2.desktop"
+  sh -n "$srcdir/kdeglance" "$srcdir/kdeglance-setup"
+}
+
+package() {
+  local module
+  cd "$srcdir/KDEGlance-$pkgver/kdeglance"
+  for module in core loader window daemon client audio audio_metadata dolphin_order \
+      dolphin_order_worker video interactions remote animation visuals legacy; do
+    install -Dm644 "$module.py" "$pkgdir/usr/lib/kdeglance/$module.py"
+  done
+  install -Dm755 libkdeglance_native.so "$pkgdir/usr/lib/kdeglance/libkdeglance_native.so"
+  for module in package_launch package_support user_setup; do
+    install -Dm644 "$srcdir/$module.py" "$pkgdir/usr/lib/kdeglance/$module.py"
+  done
+  install -Dm755 "$srcdir/kdeglance" "$pkgdir/usr/bin/kdeglance"
+  ln -s kdeglance "$pkgdir/usr/bin/kdeglance2"
+  install -Dm755 "$srcdir/kdeglance-setup" "$pkgdir/usr/bin/kdeglance-setup"
+  install -Dm644 "$srcdir/kdeglance2.service" "$pkgdir/usr/lib/systemd/user/kdeglance2.service"
+  install -Dm644 "$srcdir/io.github.KDEGlance2.service" "$pkgdir/usr/share/dbus-1/services/io.github.KDEGlance2.service"
+  install -Dm644 "$srcdir/io.github.KDEGlance2.desktop" "$pkgdir/usr/share/applications/io.github.KDEGlance2.desktop"
+  install -Dm644 "$srcdir/kdeglance-space-probe.desktop" "$pkgdir/usr/share/kio/servicemenus/kdeglance-space-probe.desktop"
+  install -Dm644 "$srcdir/KDEGlance-$pkgver/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$srcdir/NOTICES.md" "$pkgdir/usr/share/licenses/$pkgname/NOTICES.md"
+  install -Dm644 "$srcdir/AUR-INSTALL.md" "$pkgdir/usr/share/doc/$pkgname/AUR-INSTALL.md"
+}

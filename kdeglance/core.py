@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 from PyQt6.QtCore import QUrl
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 BUS = "io.github.KDEGlance2"
 OBJECT = "/io/github/KDEGlance2/Preview"
 INTERFACE = BUS + ".Preview1"

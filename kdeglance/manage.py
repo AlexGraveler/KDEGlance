@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from legacy import is_experimental_menu, save_backup, archive_experimental_menu
 
 SOURCE = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("XDG_DATA_HOME") or Path.home()/".local/share")
@@ -29,7 +30,7 @@ PUBLIC_BIN = Path.home()/".local/bin/kdeglance"
 MANAGER = Path.home()/".local/bin/kdeglance-manage"
 MANIFEST = STATE / "installation.json"
 RUNTIME = ("core.py", "loader.py", "window.py", "daemon.py", "client.py", "libkdeglance_native.so",
-           "manage.py", "build_native.py", "native.cpp", "README.md", "audio.py", "audio_metadata.py", "vendor", "dolphin_order.py", "dolphin_order_worker.py", "video.py", "interactions.py", "remote.py", "animation.py", "visuals.py", "COPYING", "THIRD_PARTY.md")
+           "manage.py", "build_native.py", "native.cpp", "README.md", "audio.py", "audio_metadata.py", "vendor", "dolphin_order.py", "dolphin_order_worker.py", "video.py", "interactions.py", "remote.py", "animation.py", "visuals.py", "legacy.py", "COPYING", "THIRD_PARTY.md")
 
 
 def dolphin_launcher():
@@ -301,17 +302,32 @@ def restore_dolphin():
 
 def uninstall(isolated=False, purge=False):
     if not MANIFEST.exists():
-        print("No KDEGlance installation manifest; nothing removed")
+        if PROBE.exists() or PROBE.is_symlink():
+            # The explicit uninstall may archive only the recognized retired probe.
+            backup = archive_experimental_menu(DATA, STATE.parent)
+            print("Experimental menu archived: " + str(backup))
+        else:
+            print("No KDEGlance installation manifest; nothing removed")
         return
     manifest = load_manifest()
     for name, expected in manifest["installed"].items():
         path = Path(name)
         if path.exists() and digest(path) != expected:
             raise RuntimeError("Файл изменён пользователем; удаление остановлено: " + name)
+    retired = None
+    original = manifest["original"].get(str(PROBE), {})
+    if str(PROBE) in manifest["installed"] and original.get("existed"):
+        data = Path(original["copy"]).read_bytes()
+        if is_experimental_menu(data, DATA):
+            retired = save_backup(data, DATA, STATE.parent, PROBE)
     if not isolated:
         systemctl("disable", "--now", "kdeglance2.service", check=False)
     for name in manifest["installed"]:
-        restore(Path(name), manifest["original"][name])
+        if Path(name) == PROBE and retired:
+            PROBE.unlink(missing_ok=True)
+            print("Retired experimental menu preserved in backup, not reactivated: " + str(retired))
+        else:
+            restore(Path(name), manifest["original"][name])
     if (ROOT/".owned-by-kdeglance2").is_file():
         shutil.rmtree(ROOT)
     if not isolated:
@@ -322,7 +338,7 @@ def uninstall(isolated=False, purge=False):
         shutil.rmtree(STATE)
     else:
         MANIFEST.unlink()
-    print("KDEGlance удалён; исходное Service Menu восстановлено. "
+    print("KDEGlance удалён; интеграция очищена/восстановлена. "
           + ("Логи и снимки удалены." if purge else "Логи и резервные копии сохранены: " + str(STATE)))
 
 

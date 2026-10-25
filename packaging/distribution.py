@@ -6,7 +6,7 @@ APP_FILES=(
     'core.py','loader.py','window.py','daemon.py','client.py','manage.py',
     'build_native.py','native.cpp','README.md','audio.py','audio_metadata.py',
     'dolphin_order.py','dolphin_order_worker.py','video.py','interactions.py',
-    'remote.py','animation.py','visuals.py','COPYING','THIRD_PARTY.md',
+    'remote.py','animation.py','visuals.py','legacy.py','COPYING','THIRD_PARTY.md',
 )
 INSTALL_FILES=('install.py','uninstall.py','check_env.py')
 

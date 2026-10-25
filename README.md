@@ -2,7 +2,7 @@
 
 **Quick Look-style file preview for KDE Plasma and Dolphin**
 
-KDEGlance **1.0.0** opens a borderless preview of the selected file in Dolphin.
+KDEGlance **1.0.1** opens a borderless preview of the selected file in Dolphin.
 Preview an image, listen to audio, or watch a video without opening a full editor
 or media-library application. Move through a mixed folder while keeping
 Dolphin's selected and current keyboard item in sync.
@@ -25,7 +25,7 @@ Dolphin's selected and current keyboard item in sync.
 - Explicit mixed-file navigation and Dolphin selection synchronization. Merely
   changing Dolphin's selection does not start another preview.
 - Local paths, file URLs, mounted drives and SMB URLs through KDE KIO Fuse.
-  General AFC/iPhone, SFTP and other KIO URL handling is **not included** in 1.0.0.
+  General AFC/iPhone, SFTP and other KIO URL handling is **not included** in 1.0.1.
 
 ## Screenshots
 
@@ -45,7 +45,7 @@ as interface mockups; native compositor effects/placement are not demonstrated.
 
 ## Installation
 
-For the smallest download, use `KDEGlance-1.0.0.tar.gz` from the project's
+For the smallest download, use `KDEGlance-1.0.1.tar.gz` from the project's
 GitHub Releases once published. It contains the full required application source,
 installer and license notices, without developer tests, screenshots or example
 media. Extract it and run `bash install.sh` in the extracted folder.
@@ -66,6 +66,15 @@ user integration. Do **not** run the whole installer as root.
 
 A read-only check is available with `bash install.sh --check`.
 See [INSTALL.md](INSTALL.md) for requirements, manual Space binding, updates and removal.
+
+## Arch package preparation
+
+A `kdeglance` 1.0.1-1 PKGBUILD and generated `.SRCINFO` are prepared in
+[packaging/aur](packaging/aur). See the [package testing and migration guide](packaging/aur/AUR-INSTALL.md).
+This is a local preparation awaiting real laptop acceptance, not an AUR publication.
+The original manual installer remains available and unchanged. Package installation
+does not assign shortcuts, start services or modify user files; optional per-user
+Dolphin setup is explicit and reversible.
 
 ## Usage
 
@@ -102,6 +111,7 @@ kdeglance state
 | Drag zoomed image/video | Pan content; fitted content/window dragging follows existing viewer rules |
 | Drag window; Alt-drag | Move preview using the compositor |
 | 0 or F | Fit an image to the window; F toggles video fullscreen |
+| Video double click | Toggle fullscreen |
 | Play/pause button | Toggle audio/video playback |
 | Click/drag progress bar | Seek audio/video |
 | Wheel on progress bar | Seek by one second per wheel step |

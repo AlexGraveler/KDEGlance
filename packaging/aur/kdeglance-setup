@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/bin/python3 -B /usr/lib/kdeglance/user_setup.py "$@"

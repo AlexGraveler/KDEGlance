@@ -18,7 +18,7 @@ def session(source,examples):
     def run(*args):return subprocess.run(args,cwd=root,check=True,capture_output=True,text=True,timeout=45)
     run('bash',str(source/'install.sh'),'--test-isolated')
     client=Path.home()/'.local/bin/kdeglance'
-    assert run(str(client),'--version').stdout.strip()=='KDEGlance 1.0.0'
+    assert run(str(client),'--version').stdout.strip()=='KDEGlance 1.0.1'
     current=Path(os.environ['XDG_DATA_HOME'])/'kdeglance2/current'
     log=(root/'daemon.log').open('w')
     daemon=subprocess.Popen([sys.executable,'-B',str(current/'daemon.py')],stdout=log,stderr=log)
@@ -40,12 +40,12 @@ def session(source,examples):
             if owner=='b true':break
             if daemon.poll() is not None:raise RuntimeError('Packaged daemon exited before registration')
             time.sleep(.05)
-        value=wait(lambda s:s['version']=='1.0.0')
+        value=wait(lambda s:s['version']=='1.0.1')
         assert value['pid']==daemon.pid, 'Unexpected daemon in private test session'
         for path,module in [(next(examples.glob('*.png')),'image'),(examples/'audio/preview.mp3','audio'),(examples/'video/preview.mp4','video')]:
             run(str(client),'open','--',str(path))
             value=wait(lambda s:s.get('module')==module and s.get('visible') and (s.get('phase')=='ready' if module=='image' else (s.get('video',{}).get('frames_received',0)>2 if module=='video' else s.get('audio_playing',s.get('playing',False)) or s.get('audio',{}).get('playing',False))))
-            assert value['version']=='1.0.0'
+            assert value['version']=='1.0.1'
         run(str(client),'close')
     finally:
         daemon.terminate();daemon.wait(timeout=10);log.close()
@@ -56,7 +56,7 @@ def session(source,examples):
 
 def main():
     if len(sys.argv)>1 and sys.argv[1]=='--session':return session(Path(sys.argv[2]),Path(sys.argv[3]))
-    archive=ROOT/'KDEGlance-1.0.0.tar.gz'
+    archive=ROOT/'KDEGlance-1.0.1.tar.gz'
     checksum=archive.with_name(archive.name+'.sha256').read_text().split()[0]
     assert hashlib.sha256(archive.read_bytes()).hexdigest()==checksum
     sys.path.insert(0,str(ROOT/'packaging'))
@@ -70,7 +70,7 @@ def main():
         with tarfile.open(archive,'r:gz') as stream:
             for member in stream:
                 parts=Path(member.name).parts
-                assert member.isfile() and parts[0]=='KDEGlance-1.0.0' and '..' not in parts
+                assert member.isfile() and parts[0]=='KDEGlance-1.0.1' and '..' not in parts
                 assert not Path(member.name).is_absolute()
                 assert not any(p in ('.work','.git','__pycache__','.venv','venv') for p in parts)
                 assert not member.name.endswith(('.so','.pyc','.log','.tar.gz'))
@@ -80,7 +80,7 @@ def main():
                 assert stream.extractfile(member).read()==expected[name].read_bytes(),name
                 target=extracted/member.name;target.parent.mkdir(parents=True,exist_ok=True)
                 target.write_bytes(stream.extractfile(member).read());target.chmod(member.mode)
-        source=extracted/'KDEGlance-1.0.0'
+        source=extracted/'KDEGlance-1.0.1'
         assert seen==set(expected),'Distribution allowlist mismatch'
         assert not (source/'tests').exists() and not (source/'screenshots').exists()
         assert not (source/'kdeglance/examples').exists()

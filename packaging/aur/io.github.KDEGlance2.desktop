@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=KDEGlance
+Icon=image-viewer
+Exec=/usr/bin/kdeglance open -- %U
+MimeType=image/jpeg;image/png;image/webp;image/bmp;image/gif;image/heif;image/heic;image/x-canon-cr2;audio/mpeg;audio/flac;audio/x-flac;audio/ogg;audio/x-vorbis+ogg;application/ogg;audio/wav;audio/x-wav;audio/mp4;audio/x-m4a;audio/aac;audio/x-aac;video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;video/x-m4v;video/mpeg;video/mp2t;video/ogg;video/3gpp;video/x-ms-wmv;video/x-flv;application/vnd.rn-realmedia;video/vnd.rn-realvideo;
+Terminal=false
+NoDisplay=true
+StartupNotify=true
+Categories=Graphics;Viewer;

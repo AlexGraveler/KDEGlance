@@ -1,4 +1,4 @@
-# Installation — KDEGlance 1.0.0
+# Installation — KDEGlance 1.0.1
 
 ## Supported setup
 
@@ -33,6 +33,13 @@ from any directory. If Python itself is absent, the shell script first offers
 Python is available. Every package-manager action requires confirmation and
 uses `-Syu` to avoid a partial Arch upgrade. The installer never runs pip.
 A noninteractive invocation does not silently accept installation prompts.
+
+`--check` works before PyQt6 or Qt Wayland is installed. It lists missing system
+packages and returns status 1 without installing anything or changing integration.
+A complete successful check returns 0. Runtime import checks run only after the
+required packages are present. For normal installation, approve the displayed
+`sudo pacman -Syu --needed ...` command; requirements are checked again afterward.
+
 
 The local native bridge is built using pkg-config's Qt6Gui and KF6WindowSystem
 flags. The installer then backs up its integration targets, copies a versioned
@@ -112,4 +119,20 @@ Do not store unrelated files in the application-owned runtime directory.
 
 This installer deliberately refuses Fedora/Kubuntu and other non-Arch-family
 systems. Do not translate the package list blindly. Their packaging and the
-experimental universal KIO work are future work, not features of 1.0.0.
+experimental universal KIO work are future work, not features of 1.0.1.
+
+## 1.0.1 migration corrections
+
+A package can work from Dolphin while `kdeglance --version` in the terminal runs
+an old /usr/local/bin/kdeglance pointing at /opt/kdeglance/run_kdeglance.sh. Check
+`type -a kdeglance`; the parser in /usr/bin/kdeglance already supports --version
+and state without an image. Back up the old symlink only after verifying its
+exact target and ownership; do not overwrite it with the package installer.
+For package-specific instructions see [AUR-INSTALL.md](packaging/aur/AUR-INSTALL.md).
+
+The 1.0.1 manual uninstaller archives recognized retired LogSelection menus
+instead of restoring them as active actions. It does not execute log_selection.py.
+The backup contains original bytes and a SHA-256/source record under the XDG state
+folder kdeglance-migration, outside the current installation's removable state.
+Unknown actions, extra commands, symlinks and files changed during backup are
+not removed. The old experimental program directory is never deleted by this fix.

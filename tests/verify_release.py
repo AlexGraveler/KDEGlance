@@ -26,7 +26,7 @@ def main():
     assert required<=names,sorted(required-names)
     sys.path.insert(0,str(ROOT/'kdeglance'))
     from core import VERSION
-    assert VERSION=='1.0.0'==(ROOT/'VERSION').read_text().strip()
+    assert VERSION=='1.0.1'==(ROOT/'VERSION').read_text().strip()
     assert (ROOT/'LICENSE').read_bytes()==(ROOT/'kdeglance/COPYING').read_bytes()
     assert 'GNU GENERAL PUBLIC LICENSE' in (ROOT/'LICENSE').read_text()
     python_count=0
