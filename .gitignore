@@ -12,3 +12,8 @@ venv/
 
 # Generated test media
 /kdeglance/examples/
+
+# Arch Linux package build artifacts
+/packaging/aur/pkg/
+/packaging/aur/src/
+/packaging/aur/*.pkg.tar.*
