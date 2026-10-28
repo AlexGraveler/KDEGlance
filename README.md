@@ -1,178 +1,290 @@
-# KDEGlance
+# KDEGlance 2.0.0
 
-**Quick Look-style file preview for KDE Plasma and Dolphin**
+Quick Look-style file previews for **Dolphin on KDE Plasma 6**. Select a file and
+press **Space** to inspect it in a minimal, frameless window. Browse the folder
+with the arrow keys, or press **Enter** to open the original file in its default
+application.
 
-KDEGlance **1.0.1** opens a borderless preview of the selected file in Dolphin.
-Preview an image, listen to audio, or watch a video without opening a full editor
-or media-library application. Move through a mixed folder while keeping
-Dolphin's selected and current keyboard item in sync.
+KDEGlance 2.0.0 is the C++20 / Qt 6 / KDE Frameworks 6 release of the project.
+The supported and tested desktop is **CachyOS, Plasma 6, Wayland and KWin**.
+Arch Linux with equivalent dependencies is the packaging target. No binaries for
+other distributions or architectures are supplied by this release.
+
+[Downloads and releases](https://github.com/AlexGraveler/KDEGlance/releases) ·
+[Release notes](RELEASE-NOTES.md) · [Installation](docs/INSTALL.md) ·
+[Validation](docs/RELEASE-VALIDATION.md)
 
 ## Features
 
-- Images: JPEG/JPG, PNG, WebP, BMP, GIF, HEIC/HEIF and Canon CR2, subject to
-  installed Qt image plugins. Automatic EXIF orientation and bounded decoding.
-- Animated GIFs, including long/large animations decoded ahead through a small
-  worker-thread buffer instead of loading every frame into memory.
-- Pointer-centered image zoom, panning, counterclockwise rotation and horizontal
-  reflection. Transformations affect the preview; files are not edited.
-- Audio: MP3, FLAC, OGG, WAV, M4A and AAC; embedded covers or a glass-style
-  placeholder, play/pause, seeking, and volume control.
-- Video: MP4, MKV, WebM, AVI, MOV, M4V, MPEG/MPG, TS/MTS/M2TS, OGV, 3GP,
-  WMV, FLV and RMVB. Actual decoding depends on the system's Qt Multimedia/FFmpeg
-  backend and codecs. Natural-aspect previews, rotation, fullscreen and zoom.
-- Frameless movable windows, focus-loss closing, and controls that fade on
-  inactivity or when the pointer leaves the preview.
-- Explicit mixed-file navigation and Dolphin selection synchronization. Merely
-  changing Dolphin's selection does not start another preview.
-- Local paths, file URLs, mounted drives and SMB URLs through KDE KIO Fuse.
-  General AFC/iPhone, SFTP and other KIO URL handling is **not included** in 1.0.1.
+- Dolphin integration through a Space-key hook and a **KDEGlance: Quick Look**
+  context-menu action. File navigation follows Dolphin's order and can synchronize
+  its selection with the preview, including separate source-window sessions.
+- Space/Escape closes the preview; Enter and keypad Enter open the original URL
+  with KDE's MIME association through KIO. Audio/video stops before launching.
+- Images, camera RAW, animations, video, audio, text, Markdown, PDF and Writer
+  documents share a minimal frameless presentation.
+- Remembered window sizes are independent for images, video, audio, PDF, text and
+  office documents. Double-click the middle button to reset only the active module.
+- A resident, D-Bus-activated viewer is reused between previews. Closing a preview
+  releases its playback source without terminating the background service.
+- Focus-loss closing, selection synchronization, background prestart, autoplay,
+  hardware decoding and image/RAW preferences are configurable.
+- Files are viewed, not edited. Rotation, reflection, zoom, decoding and document
+  conversion do not modify the original.
 
 ## Screenshots
 
-These are captures of the real Qt widgets and media player, using the original
-synthetic media kept in the repository with the tests. They were captured offscreen, not drawn
-as interface mockups; native compositor effects/placement are not demonstrated.
+These are captures of real application widgets with synthetic media, not mockups.
+Offscreen captures show the UI, not compositor placement or physical input behavior.
 
-| Image preview | Image controls and zoom |
-| --- | --- |
-| ![Image preview](screenshots/image-preview.png) | ![Image controls](screenshots/image-controls.png) |
+| Image | Audio |
+|---|---|
+| ![Image preview](docs/screenshots/01-image.png) | ![Audio preview](docs/screenshots/03-audio-cover.png) |
 
-| Embedded audio cover | No embedded cover |
-| --- | --- |
-| ![Audio with cover](screenshots/audio-cover.png) | ![Audio placeholder](screenshots/audio-placeholder.png) |
+| Video | PDF |
+|---|---|
+| ![Video preview](docs/screenshots/05-video.png) | ![PDF preview](docs/screenshots/09-pdf.png) |
 
-![Video preview](screenshots/video-preview.png)
+| Text | Office document |
+|---|---|
+| ![Text preview](docs/screenshots/10-text.png) | ![Office preview](docs/screenshots/11-office.png) |
 
-## Installation
+## Supported file types
 
-For the smallest download, use `KDEGlance-1.0.1.tar.gz` from the project's
-GitHub Releases once published. It contains the full required application source,
-installer and license notices, without developer tests, screenshots or example
-media. Extract it and run `bash install.sh` in the extracted folder.
-The repository keeps the full documentation, Markdown screenshots and developer
-tests; they are not installed or included in the user archive.
+The installed image plugins, LibRaw and FFmpeg determine which individual variants
+can be decoded. An extension is not a guarantee for every codec, camera or file.
+See [the format and dependency matrix](docs/FORMATS.md).
 
-On CachyOS or Arch Linux, in a normal KDE Plasma Wayland user session:
+| Module | Formats |
+|---|---|
+| Images | JPEG/JPG/JFIF, PNG/APNG, GIF, BMP/DIB, TIFF, WebP, ICO/CUR, ICNS, TGA, PNM/PBM/PGM/PPM, PCX, PSD/PSB composite, SVG/SVGZ, HDR; AVIF, HEIF/HEIC, JPEG XL, JPEG 2000 and OpenEXR with their installed plugins |
+| Camera RAW | CR2/CR3/CRW, NEF/NRW, ARW/SRF/SR2, RAF, ORF, RW2/RWL, PEF, DNG, SRW and other LibRaw camera formats; support depends on the camera and LibRaw version |
+| Video containers | MP4/M4V, MKV, WebM, MOV/QT, AVI/DivX, WMV/ASF, MPEG/MPG/MPE, TS/MTS/M2TS, VOB, FLV/F4V, 3GP/3G2, OGV; MXF, DV and RealMedia when supported by FFmpeg |
+| Video codecs tested with fixtures | H.264, HEVC, AV1, VP8, VP9, MPEG-4/Xvid, MPEG-2, MJPEG, ProRes and DNxHD |
+| Audio | MP3/MP2, FLAC, WAV, AIFF, AAC/M4A/M4B/ALAC, Ogg Vorbis, Opus, WMA, APE, WavPack, Musepack, TAK, TTA, Shorten, AC-3/E-AC-3, DTS, AU/SND; AMR, RealAudio and trackers depend on the backend |
+| MIDI | MID/MIDI/KAR/RMI is experimental and requires FluidSynth plus a SoundFont |
+| Text | TXT, LOG, MD/Markdown, CSV, INI, JSON, XML, YAML/YML, CONF, TOML and plain-text source files |
+| PDF | PDF, including continuous page viewing and optional text reflow |
+| Office documents | DOC, DOCX, DOCM, RTF, ODT, OTT and FODT through LibreOffice Writer-to-PDF conversion |
 
-```bash
-git clone https://github.com/AlexGraveler/KDEGlance.git
-cd KDEGlance
-bash install.sh
-```
+Apple Pages and some less common image/tracker formats are experimental; they are
+not advertised as guaranteed document support. Spreadsheets, presentations,
+archives, editing and media-library management are outside this release.
 
-The installer checks dependencies, offers the exact `pacman` command if packages
-are missing, builds the small activation bridge locally, and asks before changing
-user integration. Do **not** run the whole installer as root.
+## Images and window geometry
 
-A read-only check is available with `bash install.sh --check`.
-See [INSTALL.md](INSTALL.md) for requirements, manual Space binding, updates and removal.
+Without a remembered manual size, an image opens at 100% (one source pixel per
+device pixel), reduced only as needed to fit the work area. A remembered manual
+size is restored and the image fits inside it without distortion; mismatched
+proportions produce black bars.
 
-## Arch package preparation
+The mouse wheel changes the photo's temporary scale and lets the window follow
+its size up to the work-area limit. Beyond that limit the image continues zooming
+inside the fixed viewport. When zooming out of a crop, the image first shrinks
+inside the existing window; once it fits, the window shrinks with it. Zoom is
+calculated around the cursor in viewport coordinates and constrained by the
+available pan range. An image that exactly fills its window has no free pan range.
 
-A `kdeglance` 1.0.1-1 PKGBUILD and generated `.SRCINFO` are prepared in
-[packaging/aur](packaging/aur). See the [package testing and migration guide](packaging/aur/AUR-INSTALL.md).
-This is a local preparation awaiting real laptop acceptance, not an AUR publication.
-The original manual installer remains available and unchanged. Package installation
-does not assign shortcuts, start services or modify user files; optional per-user
-Dolphin setup is explicit and reversible.
+**Final mouse behavior:** drag a zoomed image **without Alt** to pan the image;
+**Alt + drag** moves the window while preserving the image's local scale and offset.
+An ordinary drag also moves the window when the image has no overflow to pan.
+Dragging a border/corner without Alt freely changes the window's shape. Alt held
+at the start of a border/corner resize preserves the photo's aspect ratio.
 
-## Usage
+Only manual window resizing is remembered. Wheel zoom, its temporary window size,
+pan, automatic fit and KWin tiling/maximization do not overwrite that manual size.
+KWin owns the window's position and managed geometry after its initial placement.
 
-Reopen Dolphin after installation. Open **Settings → Configure Keyboard Shortcuts**,
-search for **KDEGlance: Quick Look** (or its translated name), and assign **Space**.
-Review any shortcut conflict in Dolphin's dialog rather than overwriting it blindly.
-The installer deliberately does not edit shortcut configuration files.
+EXIF orientation, view-only counterclockwise rotation, horizontal reflection,
+multi-page TIFF and animated GIF/WebP are supported. Decoding is asynchronous;
+a sharper source is requested when zooming requires it. RAW can use an embedded
+preview before full decoding.
 
-Select a supported file and press Space. Use the preview controls or arrow keys.
-Close with Space, Escape, a center click, or by moving focus to another application.
-Dolphin's selection remains on the last successfully previewed image/accepted media
-item when synchronization with the original folder is available.
+## Video and audio
 
-CLI examples (ensure `~/.local/bin` is on PATH):
+Video has play/pause, a seek bar, duration, volume/mute, fullscreen, one
+counterclockwise rotation button and a **Repeat** toggle. The two-arrow button is
+repeat playback: when enabled, reaching the end seeks back to the start and plays
+again. It is not a second rotation button. Four rotation presses return to the
+original orientation. The wheel zooms video, and dragging a zoomed frame pans it.
+Side clicks navigate through the same mixed-file list used by other modules.
 
-```bash
-kdeglance --version
-kdeglance open -- /path/to/file.jpg
-kdeglance toggle -- /path/to/file.mp3
-kdeglance close
-kdeglance state
-```
+Audio displays title, artist and an embedded or adjacent album cover when
+available, with a placeholder otherwise. Play/pause, seeking, volume/mute and file
+navigation are available in the compact player. Closing or switching previews
+stops the previous audio/video source. Audio and video have separate remembered
+window sizes and volume/mute preferences; Repeat is a video setting.
 
-## Keyboard and Mouse Controls
+Hardware video decoding is used when usable; a software fallback handles systems
+where hardware initialization or frame delivery fails. Actual codec support
+remains dependent on Qt Multimedia/FFmpeg.
+
+## Text, PDF and office documents
+
+Text is read-only, without a permanent toolbar or encoding menu. Encoding is
+chosen automatically using BOM/Unicode checks and legacy-encoding heuristics,
+including Windows-1251, KOI8-R, CP866 and Windows-1252. Ambiguous short legacy text
+can still be misidentified. Markdown can switch between source and rendered view.
+Wheel scrolling has the existing doubled speed, including pixel-delta input.
+Large text is loaded in chunks; scrolling near the end or Ctrl+PageDown requests more.
+
+PDF uses Poppler for continuous page viewing, scrolling, zoom, fit-to-width and
+text reflow. Page images are rendered on demand with a bounded cache. Reflow
+uses the document's text layer, so scanned pages do not gain OCR.
+
+Office documents are converted asynchronously to a temporary PDF with a separate
+headless LibreOffice profile, then use the same PDF viewer. DOCM conversion does
+not intentionally run macros; the temporary profile disables macro execution
+and link updates. Documents are not modified or saved back. Import fidelity is
+limited by LibreOffice; password-protected or damaged documents may fail.
+
+## Keyboard and mouse controls
 
 | Input | Action |
-| --- | --- |
-| Space | Open from Dolphin after manual binding; close an active preview |
-| Escape | Close; in fullscreen video, leave fullscreen first |
-| Left / Right | Previous / next supported item, including mixed media |
-| Center image/cover click | Close preview |
-| Left / right area click | Previous / next item (outside the controls) |
-| Mouse wheel on image/video | Zoom around the pointer |
-| Drag zoomed image/video | Pan content; fitted content/window dragging follows existing viewer rules |
-| Drag window; Alt-drag | Move preview using the compositor |
-| 0 or F | Fit an image to the window; F toggles video fullscreen |
-| Play/pause button | Toggle audio/video playback |
-| Click/drag progress bar | Seek audio/video |
-| Wheel on progress bar | Seek by one second per wheel step |
-| Wheel on speaker | Adjust volume; show transient vertical slider |
-| Speaker click | Show/hide volume controls |
-| Image rotation / reflection icons | Rotate 90° counterclockwise / mirror horizontally |
-| Video rotation / fullscreen icons | Rotate 90° counterclockwise / toggle fullscreen |
-| Focus outside preview | Close without requiring an always-on-top/modal window |
+|---|---|
+| Space in Dolphin's file view | Open/toggle preview; text-entry fields keep normal Space behavior |
+| Space / Escape in preview | Close; Escape first leaves fullscreen video |
+| Enter / keypad Enter | Close preview and open the original file/URL in its default application |
+| Left / Right | Previous / next file; synchronize the source Dolphin selection when enabled |
+| Leftmost / rightmost 20% of image, cover or video content | Previous / next file, outside playback controls |
+| Center content click | Close preview |
+| Single middle click / double middle click | Close / reset only the active module |
+| Wheel on photo | Temporary image zoom and adaptive window size |
+| Drag overflowing photo without Alt | Pan the photo inside the window |
+| Alt + drag photo | Move the window, preserving local image state |
+| Drag fitted photo | Move the window when there is nothing to pan |
+| Drag edge/corner without Alt | Free window proportions; photo fits without distortion |
+| Alt + drag edge/corner | Photo-proportional manual resize; other modules retain their existing ratio rule |
+| Image + / −, F or 0, 1 | Zoom, fit, 100% respectively |
+| Image double click | Toggle fit / 100% |
+| Image R; rotation / reflection icons | Counterclockwise rotation; view-only transforms |
+| PageUp / PageDown on multi-page image | Previous / next image page |
+| Video play/pause button | Start or pause; Space remains preview close |
+| Seek bar click/drag; wheel over seek bar | Seek; one second per wheel step |
+| Speaker click; wheel over volume control | Mute; adjust volume |
+| Video Repeat button | Toggle repeat playback |
+| Video F / double click / fullscreen button | Toggle fullscreen |
+| Video R / rotation button; 0 | Rotate counterclockwise; reset video zoom |
+| Wheel over video; drag zoomed video | Zoom; pan; Alt-drag moves the window |
+| Wheel over text/PDF; document navigation keys | Scroll |
+| Drag text/PDF; Shift + drag | Move window; select text respectively |
+| Markdown M | Toggle rendered Markdown / source |
+| PDF/Office Ctrl+wheel or + / −; F or 0; R | Zoom; fit width; toggle text reflow |
+| Text Ctrl+PageDown | Load the next text chunk |
+| Focus outside preview | Close if focus-loss closing is enabled |
 
-## Requirements
+System-wide KWin bindings can intercept modified mouse gestures before the viewer
+receives them. KDEGlance does not change global shortcuts or mouse bindings.
 
-- CachyOS or Arch Linux, KDE Plasma **6**, Dolphin **24.02+**, Wayland.
-- Python **3.10+**, PyQt6/Qt **6.8+**, Qt Multimedia, image-format plugins.
-- PyGObject/Gio, AT-SPI accessibility for Dolphin order/current-item integration.
-- A user D-Bus session and user systemd manager; KIO Fuse/KIO extras for SMB.
-- A C++ compiler, pkg-config, Qt/KF6 WindowSystem headers for the local activation
-  bridge build. No precompiled developer `.so` is distributed.
-- Pure-Python Mutagen **1.48.1** is bundled with its upstream license notices.
+## Installation on CachyOS / Arch Linux
 
-Exact Arch package names are listed in [INSTALL.md](INSTALL.md) and checked by
-the installer. Git is needed only for cloning, not for installing an extracted
-archive. Codex, pip, virtual environments and a Python package index are not required.
+Download the tested **x86_64** package from
+[GitHub Releases](https://github.com/AlexGraveler/KDEGlance/releases), verify its
+checksum using the supplied `SHA256SUMS`, then install:
 
-## Supported Distributions
+```bash
+sha256sum -c SHA256SUMS
+sudo pacman -U ./kdeglance-2.0.0-1-x86_64.pkg.tar.zst
+```
 
-| Distribution | Status |
-| --- | --- |
-| CachyOS, Plasma 6 / Wayland | Tested development/runtime baseline; release tests run here |
-| Arch Linux, Plasma 6 / Wayland | Supported target; expected to work with the listed packages; no separate clean-machine test |
-| Fedora KDE | Experimental work exists; not officially supported by this release/installer |
-| Kubuntu | Planned; not officially supported |
-| Other desktops / Plasma X11 | Not part of the supported configuration |
+Run checksum verification in a directory containing all files listed in SHA256SUMS.
+Close and reopen all Dolphin windows after installation/update so they load the
+installed plugins. There is no required global Space binding, custom launcher,
+AT-SPI helper or Python runtime for the application. The resident viewer starts
+on demand through D-Bus/systemd.
 
-## Known Limitations
+For **an older manually installed Python 1.x version**, first read
+[the migration notes](docs/INSTALL.md#updating-and-migration). A user-local launcher
+or systemd override can shadow `/usr/bin/kdeglance`; 2.0.0 does not delete those
+files or rewrite old user integration automatically.
 
-- Supported extensions do not guarantee that every codec/encoding variant is
-  available in the installed multimedia backend.
-- Dolphin order/keyboard selection needs its accessibility-enabled launcher and
-  an identifiable source folder. If communication fails, synchronization and
-  media navigation may be unavailable. No polling of arbitrary selection occurs.
-- SMB is handled by KIO Fuse. This is not universal KIO/AFC support and has not
-  been validated with a physical iPhone. A slow Fuse request may delay opening.
-- Wayland placement and screen constraints are managed by KWin; this release does
-  not promise universal centered placement on other distributions/compositors.
-- Initial image decoding is bounded to a 4096-pixel edge. Large GIFs use a bounded
-  buffer; slow storage/decoding may reduce playback speed. Not all installed
-  image plugins support every variant of their nominal file formats.
-- Text/PDF previews, playlists/libraries, editing/saving, and archive browsing
-  are outside this release.
+### Build from source
 
-## Testing and Contributing
+Install the Arch build tools, then clone the repository (or extract the release
+source archive):
 
-See [TESTING.md](TESTING.md), [CONTRIBUTING.md](CONTRIBUTING.md),
-[CHANGELOG.md](CHANGELOG.md), and [RELEASE-NOTES.md](RELEASE-NOTES.md).
+```bash
+sudo pacman -S --needed base-devel cmake ninja pkgconf git
+git clone https://github.com/AlexGraveler/KDEGlance.git
+cd KDEGlance
+git checkout v2.0.0
+cd packaging/arch
+./make-source-tarball.sh
+makepkg -si
+```
 
-## License
+`makepkg` resolves the declared runtime/check dependencies, performs a Release
+build, runs the mandatory tests and asks Pacman to install. Do not run makepkg as
+root. The source archive has the same `packaging/arch` workflow.
 
-KDEGlance is licensed under **GPL-3.0-or-later**, approved by the project owner.
-See [LICENSE](LICENSE) and [THIRD_PARTY.md](THIRD_PARTY.md). Bundled components
-retain their own notices; system Qt/KDE libraries are not bundled here.
+For a development build with dependencies already installed:
 
-## Disclaimer
+```bash
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
+cmake --build build
+QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
+```
 
-KDEGlance is an independent project. It is not an official KDE application and
-is not endorsed by the KDE community or KDE e.V.
+### Requirements and dependencies
+
+C++20 compiler, CMake 3.22+, Qt 6.8+, KDE Frameworks 6 and a KDE Plasma 6 user
+session. The release was verified on the versions listed in the validation report;
+a CMake minimum does not imply every older Dolphin build has been desktop-tested.
+The binary package records the Qt version it was built against as its minimum
+Qt runtime, because newer Qt plugins cannot load into an older Qt minor. Rebuild
+from source when using an older compatible toolchain.
+
+The Arch package declares: `dolphin`, `kio`, `kcoreaddons`, `kservice`,
+`kwindowsystem`, `kimageformats`, `qt6-base`, `qt6-multimedia`,
+`qt6-multimedia-ffmpeg`, `qt6-svg`, `qt6-imageformats`, `qt6-5compat`, `poppler-qt6`,
+`libreoffice`, `kio-fuse`, `libraw`, `ffmpeg` and `hicolor-icon-theme`.
+Additional codec/image libraries enable optional formats. Experimental MIDI needs
+`fluidsynth` and a compatible SoundFont such as `soundfont-fluid`.
+
+Build dependencies: CMake, Ninja, pkgconf and Arch base-devel. Test dependencies
+include D-Bus, Python, ImageMagick, qpdf and desktop-file-utils. Python runs developer
+fixture generation/desktop tests, not the installed C++ viewer. Node.js enables
+the KWin-script simulation tests.
+
+## Settings and removal
+
+Open **KDEGlance Settings** from the application launcher or run
+`kdeglance --settings`. Preferences are stored in
+`~/.config/kdeglance/settings.json`, with atomic saving and recovery backup.
+
+```bash
+sudo pacman -Rns kdeglance
+```
+
+Reopen Dolphin afterward. Package removal stops the viewer and removes its program
+files; it preserves your settings. No global KDE settings are changed.
+
+## Known limitations
+
+- Only the supplied x86_64 package has been built and tested. No independent
+  clean-machine Arch, other-distribution or multi-monitor/mixed-DPI certification.
+- Dolphin integration uses private Dolphin symbols. Future Dolphin releases may
+  require rebuilding or adapting the plugin; failures are diagnosed instead of
+  assuming file-order/selection access succeeded.
+- Native input smoothness, physical electric-edge drags and all KWin shortcut
+  configurations need manual acceptance. KWin owns tiling/maximization; it is not
+  disabled. Wayland placement on other compositors is not promised.
+- Codec/camera/import availability depends on the system libraries. Encrypted,
+  damaged or unsupported variants may fail with an error card.
+- KIO Fuse is preferred for remote previews; a cancellable KIO copy is the
+  fallback. Network availability, authentication and protocol support are system
+  dependent. Enter passes the original URL to KIO. No physical iPhone/AFC test is
+  claimed; a test HTTP server does not prove SMB access to every server.
+- Automatic legacy-text detection is heuristic. PDF reflow is not OCR, and office
+  conversion is not guaranteed to preserve every layout detail.
+- The explicit whole-application reset in Settings/CLI differs from double-middle
+  reset: only the latter is scoped to the active module. Global autoplay/hardware
+  policies remain global.
+
+## Development and license
+
+See [architecture](docs/ARCHITECTURE.md), [testing](docs/TESTING.md),
+[manual acceptance](docs/MANUAL-ACCEPTANCE.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
+License: **GPL-3.0-or-later**; see [COPYING](COPYING) and [LICENSE](LICENSE). Qt/KDE/FFmpeg/LibreOffice are system dependencies,
+not bundled with the release package. KDEGlance is an independent project, not an
+official KDE application.

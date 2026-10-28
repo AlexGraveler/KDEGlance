@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=KDEGlance Settings
+Name[ru]=Настройки KDEGlance
+Comment=Configure Quick Look previews in Dolphin
+Comment[ru]=Настройка быстрого просмотра в Dolphin
+Exec=kdeglance --settings
+Icon=org.kde.kdeglance
+Terminal=false
+StartupNotify=false
+Categories=Qt;KDE;Settings;Utility;
+Keywords=preview;quick look;dolphin;space;
+Keywords[ru]=предпросмотр;просмотр;dolphin;пробел;

@@ -1,0 +1,10 @@
+{
+    "KPlugin": {
+        "Name": "KDEGlance: Quick Look",
+        "Version": "2.0.0",
+        "Description": "Preview files with KDEGlance",
+        "Icon": "org.kde.kdeglance",
+        "License": "GPL-3.0-or-later",
+        "MimeTypes": ["application/octet-stream"]
+    }
+}

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: CC0-1.0 -->
+<component type="desktop-application">
+  <id>org.kde.kdeglance</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="io.github.alexgraveler"><name>AlexGraveler</name></developer>
+  <name>KDEGlance</name>
+  <summary>Quick Look style previews for Dolphin</summary>
+  <summary xml:lang="ru">Быстрый просмотр файлов в Dolphin в стиле Quick Look</summary>
+  <description>
+    <p>Select a file in Dolphin and press Space to preview images, camera RAW photos, animations, video, audio, text, PDF and office documents in a light floating window. Arrow keys step through the folder; the selection in Dolphin follows.</p>
+    <p xml:lang="ru">Выделите файл в Dolphin и нажмите пробел, чтобы просмотреть изображение, RAW-фотографию, анимацию, видео, аудио, текст, PDF или офисный документ в лёгком плавающем окне. Стрелки переключают файлы папки, выделение в Dolphin следует за просмотром.</p>
+  </description>
+  <url type="homepage">https://github.com/AlexGraveler/KDEGlance</url>
+  <url type="bugtracker">https://github.com/AlexGraveler/KDEGlance/issues</url>
+  <launchable type="desktop-id">org.kde.kdeglance.desktop</launchable>
+  <provides>
+    <binary>kdeglance</binary>
+    <dbus type="user">org.kde.kdeglance</dbus>
+  </provides>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <releases>
+    <release version="2.0.0" date="2026-10-29"/>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>

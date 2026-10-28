@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.kde.kdeglance
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/kdeglance --service
+SystemdService=kdeglance.service

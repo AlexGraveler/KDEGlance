@@ -1,19 +1,13 @@
-.work/
+/build*/
+/checkpoints/
+/.development-history/
+/.git/
+/.agents/
+/.aws/
+/.codex/
+/packaging/arch/src/
+/packaging/arch/pkg/
+/packaging/arch/*.tar.gz
+/packaging/arch/*.pkg.tar.*
 __pycache__/
-*.py[cod]
-*.so
-*.so.new
-*.log
-.venv/
-venv/
-*.tar.gz
-*.tar.gz.sha256
-.git/
-
-# Generated test media
-/kdeglance/examples/
-
-# Arch Linux package build artifacts
-/packaging/aur/pkg/
-/packaging/aur/src/
-/packaging/aur/*.pkg.tar.*
+*.moc

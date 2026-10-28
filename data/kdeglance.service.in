@@ -1,0 +1,14 @@
+[Unit]
+Description=KDEGlance file preview service
+Documentation=file://@CMAKE_INSTALL_FULL_DOCDIR@/README.md
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=dbus
+BusName=org.kde.kdeglance
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/kdeglance --service
+Restart=on-failure
+RestartSec=2
+Slice=app.slice
+# Started on demand through D-Bus activation; no [Install] section.

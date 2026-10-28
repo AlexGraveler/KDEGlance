@@ -1,0 +1,24 @@
+_stop_running_services() {
+  # Running viewer services of logged-in users quit cleanly on SIGTERM (they
+  # unload their KWin script); D-Bus starts the new binary on the next use.
+  pkill -TERM -x kdeglance >/dev/null 2>&1 || true
+}
+
+post_install() {
+  echo ">>> KDEGlance: close all Dolphin windows and start Dolphin again,"
+  echo ">>> then select a file and press Space. Settings: kdeglance --settings"
+}
+
+post_upgrade() {
+  _stop_running_services
+  echo ">>> KDEGlance: restart Dolphin to load the updated integration."
+}
+
+pre_remove() {
+  _stop_running_services
+}
+
+post_remove() {
+  echo ">>> KDEGlance removed. Restart Dolphin to unload the integration."
+  echo ">>> Your settings stay in ~/.config/kdeglance (delete that folder if you want)."
+}

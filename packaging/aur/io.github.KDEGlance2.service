@@ -1,4 +1,0 @@
-[D-BUS Service]
-Name=io.github.KDEGlance2
-Exec=/usr/bin/python3 -B /usr/lib/kdeglance/package_launch.py daemon
-SystemdService=kdeglance2.service

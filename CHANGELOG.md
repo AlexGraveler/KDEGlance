@@ -1,35 +1,31 @@
 # Changelog
 
-## [1.0.1] — 2026-10-24
+## 2.0.0 — 2026-10-29
 
-- Diagnose PATH shadowing by the retired /usr/local/bin/kdeglance launcher; preserve CLI argument forwarding and allow --version during migration.
-- Back up only recognized retired LogSelection experiment menus; do not reactivate them on manual uninstall. Preserve unknown files, settings and original backups.
-- Add CLI, migration and settings-preservation regression checks.
-- Prepare a local 1.0.1-1 Arch package with real source checksums; no unpublished GitHub download is assumed.
+This release packages the accepted C++20 / Qt6 / KF6 implementation without
+changing its final runtime behavior. See [full release notes](RELEASE-NOTES.md).
 
-## [1.0.0] — 2026-10-24 — Initial public release
+- Add text/Markdown, continuous PDF and LibreOffice Writer document previews
+  relative to the published Python 1.0.1 feature set.
+- Open original local/remote URLs with KDE MIME associations through Enter/keypad
+  Enter, closing the preview and stopping its playback first.
+- Include independent module geometry/preferences and active-module middle-double
+  reset; preserve settings compatibility with the local 1.0.0-5 C++ packages.
+- Document accepted photo behavior: ordinary drag pans a zoomed photo, Alt-drag
+  moves its window; temporary wheel zoom and manual saved geometry stay separate.
+- Include video Repeat, counterclockwise rotation, fullscreen, zoom/pan and shared
+  navigation. Repeat is explicitly documented and retained.
+- Ship native Dolphin plugins, D-Bus/systemd activation, KWin placement helper,
+  updated English documentation, release source archive and tested Arch package.
 
-- Quick Look-style user-level Dolphin integration with manual Space binding.
-- Borderless image preview, EXIF orientation, zoom/pan, rotation and reflection.
-- Bounded image decoding and buffered playback of large/long GIF animations.
-- Audio playback with embedded artwork, glass-style fallback, seek and volume.
-- Natural-aspect video preview, playback controls, rotation, zoom and fullscreen.
-- Mixed image/audio/video navigation with explicit Dolphin order/current-item sync.
-- Local/file URL paths and SMB access through KIO Fuse.
-- Shared fading controls, movable windows, keyboard navigation and focus closing.
-- Reference-style white vector icons, preserving existing control actions.
-- Source-only Arch/CachyOS installer, local native bridge build, reversible user
-  integration and repeatable manifest-based removal.
-- Original redistributable media fixtures, automated tests, screenshots and GPL licensing.
+## Published 1.x history
 
-Earlier internal development iterations were not public releases. No fictional
-public release history is included.
+The GitHub tags `v1.0.0` and `v1.0.1` preserve the previous Python/PyQt6 source and
+its original release documentation. Version 1.0.1 was a maintenance/migration and
+packaging update. Image/GIF/audio/video preview, rotation, zoom and navigation
+already existed in that implementation; they are not claimed as first appearing
+in 2.0.0.
 
-### Installer corrections before publication
-
-- Bootstrap dependency checks without importing application modules or requiring
-  PyQt6. Read the release version using only the standard library.
-- Defer Qt/Gio runtime checks until missing system packages have been installed;
-  list missing packages without a traceback in read-only check mode.
-- Cover clean-machine PyQt6/Qt Wayland combinations and confirmed package setup
-  with isolated installer regression tests. Preview/playback behavior is unchanged.
+Local C++ development checkpoints named 1.0.0-2 through 1.0.0-5 were acceptance
+builds, not additional published GitHub releases. Their accepted behavior forms
+the stable baseline of 2.0.0.

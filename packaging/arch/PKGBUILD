@@ -1,0 +1,76 @@
+# Maintainer: KDEGlance contributors
+# Build:   ./make-source-tarball.sh && makepkg -si
+# Clean chroot build and install/remove test: ./test-in-clean-chroot.sh
+
+pkgname=kdeglance
+pkgver=2.0.0
+pkgrel=1
+url="https://github.com/AlexGraveler/KDEGlance"
+pkgdesc="Quick Look style previews for Dolphin (Space): images, camera RAW, animations, media and documents"
+arch=('x86_64' 'aarch64')
+license=('GPL-3.0-or-later')
+depends=(
+  'dolphin'
+  'kio'
+  'kcoreaddons'
+  'kservice'                # KDE MIME application associations
+  'kwindowsystem'
+  'kimageformats'           # PSD, PCX, HDR, TGA-RLE, AVIF/HEIF/JXL/EXR/JP2 (with their libraries)
+  'qt6-5compat'             # legacy text encodings
+  'poppler-qt6'             # continuous PDF rendering
+  'libreoffice'             # isolated headless Writer document conversion
+  'kio-fuse'                # streaming access to SMB/KIO URLs
+  'qt6-base>=6.8.0'
+  'qt6-multimedia'
+  'qt6-multimedia-ffmpeg'   # FFmpeg backend: almost every audio/video format
+  'qt6-svg'
+  'qt6-imageformats'        # TIFF, WebP, ICNS, TGA
+  'libraw'                  # camera RAW
+  'ffmpeg'
+  'hicolor-icon-theme'
+)
+optdepends=(
+  'libheif: HEIF/HEIC photos (kimageformats plugin)'
+  'libavif: AVIF images (kimageformats plugin)'
+  'libjxl: JPEG XL images (kimageformats plugin)'
+  'openexr: OpenEXR images (kimageformats plugin)'
+  'openjpeg2: JPEG 2000 images (kimageformats plugin)'
+  'fluidsynth: MIDI playback'
+  'soundfont-fluid: General MIDI SoundFont for fluidsynth'
+)
+makedepends=('cmake' 'ninja' 'pkgconf')
+checkdepends=('dbus' 'imagemagick' 'python' 'qpdf' 'desktop-file-utils' 'nodejs')
+install=kdeglance.install
+source=("kdeglance-${pkgver}.tar.gz")
+sha256sums=('bf94905e519c9ffa3e7d1401767c3e78462e942de8bbe6aa75a00941871a19af')
+
+build() {
+  cmake -B build -S "kdeglance-${pkgver}" -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DKDEGLANCE_QT_PLUGIN_DIR=lib/qt6/plugins \
+    -DBUILD_TESTING=ON
+  # Source archives have deterministic mtimes; never reuse stale objects from
+  # a previous extraction of the same version. Only compiler outputs are cleaned.
+  cmake --build build --clean-first
+}
+
+check() {
+  # Headless: offscreen platform, private D-Bus buses inside the tests.
+  cd build
+  QT_QPA_PLATFORM=offscreen ctest --output-on-failure --timeout 900
+}
+
+package() {
+  # Qt refuses a plugin built against a newer Qt minor. Source minimum and
+  # binary runtime minimum are different: record the Qt used for this build.
+  local qt_built_version
+  qt_built_version="$(pkg-config --modversion Qt6Core)"
+  local index
+  for index in "${!depends[@]}"; do
+    if [[ "${depends[$index]}" == qt6-base* ]]; then
+      depends[$index]="qt6-base>=${qt_built_version}"
+    fi
+  done
+  DESTDIR="${pkgdir}" cmake --install build
+}

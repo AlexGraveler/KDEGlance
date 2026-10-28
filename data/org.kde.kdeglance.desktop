@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=KDEGlance
+GenericName=Quick Look
+GenericName[ru]=Быстрый просмотр
+Comment=Quick previews of media and documents from Dolphin
+Comment[ru]=Быстрый просмотр медиафайлов и документов из Dolphin
+Exec=kdeglance %F
+Icon=org.kde.kdeglance
+Terminal=false
+NoDisplay=true
+StartupNotify=false
+Categories=Qt;KDE;Utility;Viewer;
