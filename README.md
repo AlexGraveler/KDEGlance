@@ -34,20 +34,23 @@ other distributions or architectures are supplied by this release.
 
 ## Screenshots
 
-These are captures of real application widgets with synthetic media, not mockups.
-Offscreen captures show the UI, not compositor placement or physical input behavior.
+Screenshots of KDEGlance 2.0 running on KDE Plasma.
 
-| Image | Audio |
+| Image preview | Audio with cover |
 |---|---|
-| ![Image preview](docs/screenshots/01-image.png) | ![Audio preview](docs/screenshots/03-audio-cover.png) |
+| ![Image preview](docs/screenshots/01-Photo.png) | ![Audio with cover](docs/screenshots/02-Audio%20cover.png) |
 
-| Video | PDF |
+| Audio without cover | Video preview |
 |---|---|
-| ![Video preview](docs/screenshots/05-video.png) | ![PDF preview](docs/screenshots/09-pdf.png) |
+| ![Audio without cover](docs/screenshots/03-Audio%20blank.png) | ![Video preview](docs/screenshots/04-Video.png) |
 
-| Text | Office document |
+| PDF preview | Text preview |
 |---|---|
-| ![Text preview](docs/screenshots/10-text.png) | ![Office preview](docs/screenshots/11-office.png) |
+| ![PDF preview](docs/screenshots/05-PDF.png) | ![Text preview](docs/screenshots/06-Text.png) |
+
+| Settings |
+|---|
+| ![KDEGlance settings](docs/screenshots/07-settings.png) |
 
 ## Supported file types
 
