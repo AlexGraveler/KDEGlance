@@ -215,7 +215,7 @@ bool PdfView::eventFilter(QObject* watched, QEvent* event)
             bool accepted = false;
             // Repeat the original vertical step: Qt caps a multiplied wheel
             // delta to one page. Forward the horizontal component only once.
-            for (int step = 0; step < 3; ++step) {
+            for (int step = 0; step < 9; ++step) {
                 QWheelEvent accelerated(wheel->position(), wheel->globalPosition(),
                     QPoint(step ? 0 : pixels.x(), pixels.y()),
                     QPoint(step ? 0 : angle.x(), angle.y()),

@@ -185,12 +185,12 @@ private Q_SLOTS:
         QTest::addColumn<int>("factor");
         for (bool reflow : { false, true }) {
             const QByteArray prefix = reflow ? "reflow-" : "pages-";
-            QTest::newRow((prefix + "down").constData()) << reflow << QPoint(0,-120) << QPoint() << 1 << Qt::KeyboardModifiers() << 3;
-            QTest::newRow((prefix + "up").constData()) << reflow << QPoint(0,120) << QPoint() << 1 << Qt::KeyboardModifiers() << 3;
-            QTest::newRow((prefix + "multi-notch").constData()) << reflow << QPoint(0,-600) << QPoint() << 1 << Qt::KeyboardModifiers() << 3;
-            QTest::newRow((prefix + "diagonal-vertical").constData()) << reflow << QPoint(-30,-120) << QPoint() << 1 << Qt::KeyboardModifiers() << 3;
-            QTest::newRow((prefix + "fine-angle").constData()) << reflow << QPoint(0,-30) << QPoint() << 8 << Qt::KeyboardModifiers() << 3;
-            QTest::newRow((prefix + "pixels").constData()) << reflow << QPoint() << QPoint(0,-7) << 0 << Qt::KeyboardModifiers() << 3;
+            QTest::newRow((prefix + "down").constData()) << reflow << QPoint(0,-120) << QPoint() << 1 << Qt::KeyboardModifiers() << 9;
+            QTest::newRow((prefix + "up").constData()) << reflow << QPoint(0,120) << QPoint() << 1 << Qt::KeyboardModifiers() << 9;
+            QTest::newRow((prefix + "multi-notch").constData()) << reflow << QPoint(0,-600) << QPoint() << 1 << Qt::KeyboardModifiers() << 9;
+            QTest::newRow((prefix + "diagonal-vertical").constData()) << reflow << QPoint(-30,-120) << QPoint() << 1 << Qt::KeyboardModifiers() << 9;
+            QTest::newRow((prefix + "fine-angle").constData()) << reflow << QPoint(0,-30) << QPoint() << 8 << Qt::KeyboardModifiers() << 9;
+            QTest::newRow((prefix + "pixels").constData()) << reflow << QPoint() << QPoint(0,-7) << 0 << Qt::KeyboardModifiers() << 9;
             QTest::newRow((prefix + "horizontal").constData()) << reflow << QPoint(-120,0) << QPoint() << 1 << Qt::KeyboardModifiers() << 1;
             QTest::newRow((prefix + "diagonal-horizontal").constData()) << reflow << QPoint(-120,30) << QPoint() << 1 << Qt::KeyboardModifiers() << 1;
             QTest::newRow((prefix + "ctrl-zoom").constData()) << reflow << QPoint(0,120) << QPoint() << 1 << Qt::KeyboardModifiers(Qt::ControlModifier) << 1;
@@ -254,7 +254,7 @@ private Q_SLOTS:
         QCOMPARE(h->value()-hstart,href->value()-hstart);
         if (!(modifiers & Qt::ControlModifier)) {
             QCOMPARE(v->value()-start,factor*(ref->value()-start));
-            if (!angle.isNull() && factor==3) QVERIFY(ref->value()!=start);
+            if (!angle.isNull() && factor==9) QVERIFY(ref->value()!=start);
         } else {
             QCOMPARE(v->value(),ref->value());
         }

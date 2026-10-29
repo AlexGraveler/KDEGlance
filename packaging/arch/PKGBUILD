@@ -3,7 +3,7 @@
 
 pkgname=kdeglance
 pkgver=2.0.1
-pkgrel=1
+pkgrel=2
 url="https://github.com/AlexGraveler/KDEGlance"
 pkgdesc="File previews for Dolphin: images, RAW, audio, video and documents"
 arch=('x86_64')
@@ -49,7 +49,7 @@ makedepends=('cmake' 'ninja' 'pkgconf')
 checkdepends=('libreoffice' 'dbus' 'imagemagick' 'python' 'qpdf' 'desktop-file-utils' 'nodejs')
 install=kdeglance.install
 source=("${url}/releases/download/v${pkgver}/kdeglance-${pkgver}.tar.gz")
-sha256sums=('c5a339e5d461f3652437ed56ee42e5553e16f18f34630bc7c4483fef68faeab1')
+sha256sums=('4147f8981684a28a19bd190ad331d99e4ffed7e4c2bc77ded98f7b8ff2efdec4')
 
 prepare() {
   # Fail on an unexpected archive layout/version instead of building another ref.
