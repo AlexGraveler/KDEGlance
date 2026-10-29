@@ -1,11 +1,11 @@
 # Arch Linux / CachyOS / EndeavourOS
 
-This recipe builds **KDEGlance 2.0.0-3** from the official v2.0.0 release asset:
+This recipe builds **KDEGlance 2.0.1-1** from the official v2.0.1 release asset:
 
-https://github.com/AlexGraveler/KDEGlance/releases/download/v2.0.0/kdeglance-2.0.0.tar.gz
+https://github.com/AlexGraveler/KDEGlance/releases/download/v2.0.1/kdeglance-2.0.1.tar.gz
 
 SHA-256 is pinned in PKGBUILD. The current `main` source tree is not compiled.
-`pkgrel=3` identifies a packaging revision; the application version stays 2.0.0.
+`pkgver=2.0.1` and `pkgrel=1` identify this release package.
 The package architecture is x86_64; ARM builds have not been validated.
 
 ## Install locally
@@ -39,7 +39,7 @@ makepkg -s
 To install an already built package:
 
 ```bash
-sudo pacman -U ./kdeglance-2.0.0-3-x86_64.pkg.tar.zst
+sudo pacman -U ./kdeglance-2.0.1-1-x86_64.pkg.tar.zst
 ```
 
 ## Dependencies and integration
@@ -67,7 +67,7 @@ preferences. Dependencies are system packages and are not bundled.
 ```bash
 makepkg --verifysource
 makepkg --printsrcinfo > .SRCINFO
-namcap PKGBUILD kdeglance-2.0.0-3-x86_64.pkg.tar.zst
+namcap PKGBUILD kdeglance-2.0.1-1-x86_64.pkg.tar.zst
 ```
 
 Install namcap separately if needed. Do not skip the tests to produce release

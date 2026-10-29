@@ -9,7 +9,7 @@ class PdfCanvas;
 class PdfView : public ContentView {
     Q_OBJECT
 public:
-    explicit PdfView(QWidget* parent = nullptr);
+    explicit PdfView(QWidget* parent = nullptr, bool accelerateVerticalWheel = true);
     ~PdfView() override;
     void load(const PreviewItem& item) override;
     void unload() override;
@@ -23,6 +23,9 @@ public:
     bool isReflow() const;
     bool handleKey(QKeyEvent* event) override;
 
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 private:
     void setReflow(bool enabled);
     std::shared_ptr<PdfSession> m_session;
@@ -30,5 +33,7 @@ private:
     PdfCanvas* m_canvas;
     QPlainTextEdit* m_text;
     bool m_reflowRequested = false;
+    bool m_accelerateVerticalWheel;
+    bool m_forwardingWheel = false;
 };
 }

@@ -2,8 +2,8 @@
 # Build from the pinned upstream release: makepkg -si
 
 pkgname=kdeglance
-pkgver=2.0.0
-pkgrel=3
+pkgver=2.0.1
+pkgrel=1
 url="https://github.com/AlexGraveler/KDEGlance"
 pkgdesc="File previews for Dolphin: images, RAW, audio, video and documents"
 arch=('x86_64')
@@ -49,7 +49,7 @@ makedepends=('cmake' 'ninja' 'pkgconf')
 checkdepends=('libreoffice' 'dbus' 'imagemagick' 'python' 'qpdf' 'desktop-file-utils' 'nodejs')
 install=kdeglance.install
 source=("${url}/releases/download/v${pkgver}/kdeglance-${pkgver}.tar.gz")
-sha256sums=('bf94905e519c9ffa3e7d1401767c3e78462e942de8bbe6aa75a00941871a19af')
+sha256sums=('c5a339e5d461f3652437ed56ee42e5553e16f18f34630bc7c4483fef68faeab1')
 
 prepare() {
   # Fail on an unexpected archive layout/version instead of building another ref.

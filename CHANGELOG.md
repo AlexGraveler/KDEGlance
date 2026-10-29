@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1 — 2026-10-29
+
+- Triple vertical mouse-wheel scrolling in the PDF viewer, including text reflow.
+- Preserve Ctrl+wheel zoom, horizontal scrolling and all other viewers, including
+  the PDF component embedded in Office previews.
+
 ## 2.0.0 — 2026-10-29
 
 This release packages the accepted C++20 / Qt6 / KF6 implementation without

@@ -14,7 +14,7 @@
 namespace KDEGlance {
 OfficeView::OfficeView(QWidget* parent)
     : ContentView(parent)
-    , m_pdf(new PdfView(this))
+    , m_pdf(new PdfView(this, false))
 {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);

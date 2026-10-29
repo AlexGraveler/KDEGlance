@@ -1,4 +1,4 @@
-# KDEGlance 2.0.0
+# KDEGlance 2.0.1
 
 Quick Look-style file previews for **Dolphin on KDE Plasma 6**. Select a file and
 press **Space** to inspect it in a minimal, frameless window. Browse the folder
@@ -13,6 +13,9 @@ other distributions or architectures are supplied by this release.
 [Downloads and releases](https://github.com/AlexGraveler/KDEGlance/releases) ·
 [Release notes](RELEASE-NOTES.md) · [Installation](docs/INSTALL.md) ·
 [Validation](docs/RELEASE-VALIDATION.md)
+
+Version 2.0.1 changes only PDF vertical mouse-wheel scrolling to 3× speed;
+Ctrl+wheel zoom, horizontal scrolling and other viewers retain their behavior.
 
 ## Features
 
@@ -191,8 +194,8 @@ cd KDEGlance/packaging/arch
 makepkg -si
 ```
 
-The recipe builds **KDEGlance 2.0.0-3** from the official
-[v2.0.0 source archive](https://github.com/AlexGraveler/KDEGlance/releases/download/v2.0.0/kdeglance-2.0.0.tar.gz)
+The recipe builds **KDEGlance 2.0.1-1** from the official
+[v2.0.1 source archive](https://github.com/AlexGraveler/KDEGlance/releases/download/v2.0.1/kdeglance-2.0.1.tar.gz)
 and verifies its SHA-256. It does not compile the changing `main` source tree.
 Use the current packaging files; checking out `v2.0.0` selects the older packaging
 included in that tag. `makepkg -si` resolves dependencies, builds the application,

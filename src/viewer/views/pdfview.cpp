@@ -10,6 +10,7 @@
 #include <QPainter>
 #include <QPlainTextEdit>
 #include <QScrollBar>
+#include <QScopedValueRollback>
 #include <QSet>
 #include <QThreadPool>
 #include <QTextDocument>
@@ -174,10 +175,11 @@ private:
         });
     }
 };
-PdfView::PdfView(QWidget* parent)
+PdfView::PdfView(QWidget* parent, bool accelerateVerticalWheel)
     : ContentView(parent)
     , m_canvas(new PdfCanvas(this))
     , m_text(new QPlainTextEdit(this))
+    , m_accelerateVerticalWheel(accelerateVerticalWheel)
 {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -193,8 +195,42 @@ PdfView::PdfView(QWidget* parent)
     m_text->hide();
     enableDocumentDragging(m_canvas->viewport());
     enableDocumentDragging(m_text->viewport());
+    m_canvas->verticalScrollBar()->installEventFilter(this);
+    m_text->verticalScrollBar()->installEventFilter(this);
 }
 PdfView::~PdfView() { unload(); }
+bool PdfView::eventFilter(QObject* watched, QEvent* event)
+{
+    if (m_accelerateVerticalWheel && !m_forwardingWheel && event->type() == QEvent::Wheel
+        && (watched == m_canvas->viewport() || watched == m_text->viewport()
+            || watched == m_canvas->verticalScrollBar() || watched == m_text->verticalScrollBar())) {
+        auto* wheel = static_cast<QWheelEvent*>(event);
+        const QPoint angle = wheel->angleDelta();
+        const QPoint pixels = wheel->pixelDelta();
+        const QPoint direction = angle.isNull() ? pixels : angle;
+        // Keep Qt's original axis selection and leave Ctrl-wheel zoom untouched.
+        if (!(wheel->modifiers() & Qt::ControlModifier) && direction.y() != 0
+            && std::abs(direction.y()) >= std::abs(direction.x())) {
+            QScopedValueRollback<bool> forwarding(m_forwardingWheel, true);
+            bool accepted = false;
+            // Repeat the original vertical step: Qt caps a multiplied wheel
+            // delta to one page. Forward the horizontal component only once.
+            for (int step = 0; step < 3; ++step) {
+                QWheelEvent accelerated(wheel->position(), wheel->globalPosition(),
+                    QPoint(step ? 0 : pixels.x(), pixels.y()),
+                    QPoint(step ? 0 : angle.x(), angle.y()),
+                    wheel->buttons(), wheel->modifiers(), wheel->phase(), wheel->inverted(),
+                    wheel->source(), wheel->pointingDevice());
+                accelerated.setTimestamp(wheel->timestamp());
+                QApplication::sendEvent(watched, &accelerated);
+                accepted |= accelerated.isAccepted();
+            }
+            wheel->setAccepted(accepted);
+            return true;
+        }
+    }
+    return ContentView::eventFilter(watched, event);
+}
 void PdfView::resetPresentation()
 {
     const auto font=QApplication::font("QPlainTextEdit");

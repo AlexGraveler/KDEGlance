@@ -175,6 +175,90 @@ private Q_SLOTS:
         QVERIFY(normal->value()!=500);
         QCOMPARE(fast->value()-500,2*(normal->value()-500));
     }
+    void pdfWheelSpeed_data()
+    {
+        QTest::addColumn<bool>("reflow");
+        QTest::addColumn<QPoint>("angle");
+        QTest::addColumn<QPoint>("pixels");
+        QTest::addColumn<int>("count");
+        QTest::addColumn<Qt::KeyboardModifiers>("modifiers");
+        QTest::addColumn<int>("factor");
+        for (bool reflow : { false, true }) {
+            const QByteArray prefix = reflow ? "reflow-" : "pages-";
+            QTest::newRow((prefix + "down").constData()) << reflow << QPoint(0,-120) << QPoint() << 1 << Qt::KeyboardModifiers() << 3;
+            QTest::newRow((prefix + "up").constData()) << reflow << QPoint(0,120) << QPoint() << 1 << Qt::KeyboardModifiers() << 3;
+            QTest::newRow((prefix + "multi-notch").constData()) << reflow << QPoint(0,-600) << QPoint() << 1 << Qt::KeyboardModifiers() << 3;
+            QTest::newRow((prefix + "diagonal-vertical").constData()) << reflow << QPoint(-30,-120) << QPoint() << 1 << Qt::KeyboardModifiers() << 3;
+            QTest::newRow((prefix + "fine-angle").constData()) << reflow << QPoint(0,-30) << QPoint() << 8 << Qt::KeyboardModifiers() << 3;
+            QTest::newRow((prefix + "pixels").constData()) << reflow << QPoint() << QPoint(0,-7) << 0 << Qt::KeyboardModifiers() << 3;
+            QTest::newRow((prefix + "horizontal").constData()) << reflow << QPoint(-120,0) << QPoint() << 1 << Qt::KeyboardModifiers() << 1;
+            QTest::newRow((prefix + "diagonal-horizontal").constData()) << reflow << QPoint(-120,30) << QPoint() << 1 << Qt::KeyboardModifiers() << 1;
+            QTest::newRow((prefix + "ctrl-zoom").constData()) << reflow << QPoint(0,120) << QPoint() << 1 << Qt::KeyboardModifiers(Qt::ControlModifier) << 1;
+        }
+    }
+    void pdfWheelSpeed()
+    {
+        QFETCH(bool,reflow); QFETCH(QPoint,angle); QFETCH(QPoint,pixels);
+        QFETCH(int,count); QFETCH(Qt::KeyboardModifiers,modifiers); QFETCH(int,factor);
+        const auto file = dir.filePath(u"scroll.pdf"_s);
+        {
+            QPdfWriter writer(file); writer.setResolution(72);
+            QPainter painter(&writer);
+            for (int page=0;page<12;++page) {
+                if (page) writer.newPage();
+                for (int line=0;line<70;++line)
+                    painter.drawText(20,20+line*10,u"PDF wheel scrolling regression sample"_s);
+            }
+        }
+        PdfView fast;
+        QWidget referenceContainer;
+        OfficeView office;
+        auto* baseline=office.pdfView(); // The embedded Office PDF must retain 1x.
+        baseline->setParent(&referenceContainer);
+        referenceContainer.resize(640,480); referenceContainer.show();
+        fast.resize(640,480); baseline->resize(640,480);
+        fast.show(); baseline->show();
+        fast.load(item(u"scroll.pdf"_s)); baseline->load(item(u"scroll.pdf"_s));
+        QVERIFY(waitFor([&]{return fast.pageCount()==12 && baseline->pageCount()==12;}));
+        if (reflow) {
+            QKeyEvent key(QEvent::KeyPress,Qt::Key_R,Qt::NoModifier);
+            fast.handleKey(&key); baseline->handleKey(&key);
+            QVERIFY(waitFor([&]{return fast.isReflow() && baseline->isReflow();}));
+        } else {
+            fast.setZoom(2); baseline->setZoom(2); // Both scroll axes have range.
+        }
+        auto* fastArea=reflow ? static_cast<QAbstractScrollArea*>(fast.findChild<QPlainTextEdit*>())
+                              : fast.findChild<QAbstractScrollArea*>(u"pdfCanvas"_s);
+        auto* normalArea=reflow ? static_cast<QAbstractScrollArea*>(baseline->findChild<QPlainTextEdit*>())
+                                : baseline->findChild<QAbstractScrollArea*>(u"pdfCanvas"_s);
+        QVERIFY(fastArea); QVERIFY(normalArea);
+        QTest::qWait(20);
+        QCOMPARE(fastArea->viewport()->size(),normalArea->viewport()->size());
+        auto* v=fastArea->verticalScrollBar(); auto* ref=normalArea->verticalScrollBar();
+        QCOMPARE(v->maximum(),ref->maximum());
+        const int start=ref->maximum()/2;
+        QVERIFY(start>100);
+        v->setValue(start); ref->setValue(start);
+        auto* h=fastArea->horizontalScrollBar(); auto* href=normalArea->horizontalScrollBar();
+        h->setValue(h->maximum()/2); href->setValue(href->maximum()/2);
+        const int hstart=href->value();
+        if (!count) count=normalArea->fontMetrics().lineSpacing()*4;
+        for (int i=0;i<count;++i) {
+            for (auto* area : {normalArea,fastArea}) {
+                QWheelEvent wheel(QPointF(100,100),area->viewport()->mapToGlobal(QPoint(100,100)),
+                    pixels,angle,Qt::NoButton,modifiers,Qt::ScrollUpdate,false);
+                QApplication::sendEvent(area->viewport(),&wheel);
+            }
+        }
+        QCOMPARE(fast.zoom(),baseline->zoom());
+        QCOMPARE(h->value()-hstart,href->value()-hstart);
+        if (!(modifiers & Qt::ControlModifier)) {
+            QCOMPARE(v->value()-start,factor*(ref->value()-start));
+            if (!angle.isNull() && factor==3) QVERIFY(ref->value()!=start);
+        } else {
+            QCOMPARE(v->value(),ref->value());
+        }
+    }
     void largeTextIsIncrementalAndCancelable()
     {
         write(u"large.log"_s, QByteArray(9 * 1024 * 1024, 'x'));

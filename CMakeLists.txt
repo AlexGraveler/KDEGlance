@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 KDEGlance contributors
 cmake_minimum_required(VERSION 3.22)
 
-project(kdeglance VERSION 2.0.0 LANGUAGES CXX)
+project(kdeglance VERSION 2.0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
