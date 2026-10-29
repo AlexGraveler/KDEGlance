@@ -1,7 +1,7 @@
 pkgbase = kdeglance
 	pkgdesc = File previews for Dolphin: images, RAW, audio, video and documents
 	pkgver = 2.0.1
-	pkgrel = 2
+	pkgrel = 3
 	url = https://github.com/AlexGraveler/KDEGlance
 	install = kdeglance.install
 	arch = x86_64
@@ -49,6 +49,6 @@ pkgbase = kdeglance
 	optdepends = fluidsynth: MIDI playback
 	optdepends = soundfont-fluid: General MIDI SoundFont for fluidsynth
 	source = https://github.com/AlexGraveler/KDEGlance/releases/download/v2.0.1/kdeglance-2.0.1.tar.gz
-	sha256sums = 4147f8981684a28a19bd190ad331d99e4ffed7e4c2bc77ded98f7b8ff2efdec4
+	sha256sums = 2ba32f9417899ad8836af80b5403b41f5834d5877d9dfa1e69ac2821ffd56f0a
 
 pkgname = kdeglance

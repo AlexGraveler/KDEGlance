@@ -2,7 +2,7 @@
 
 ## 2.0.1 — 2026-10-29
 
-- Increase vertical mouse-wheel scrolling ninefold in the PDF viewer, including text reflow.
+- Increase vertical mouse-wheel scrolling twenty-sevenfold in the PDF viewer, including text reflow.
 - Preserve Ctrl+wheel zoom, horizontal scrolling and all other viewers, including
   the PDF component embedded in Office previews.
 
