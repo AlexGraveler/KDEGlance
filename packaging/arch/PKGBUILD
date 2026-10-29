@@ -1,26 +1,30 @@
 # Maintainer: KDEGlance contributors
-# Build:   ./make-source-tarball.sh && makepkg -si
-# Clean chroot build and install/remove test: ./test-in-clean-chroot.sh
+# Build from the pinned upstream release: makepkg -si
 
 pkgname=kdeglance
 pkgver=2.0.0
-pkgrel=1
+pkgrel=3
 url="https://github.com/AlexGraveler/KDEGlance"
-pkgdesc="Quick Look style previews for Dolphin (Space): images, camera RAW, animations, media and documents"
-arch=('x86_64' 'aarch64')
+pkgdesc="File previews for Dolphin: images, RAW, audio, video and documents"
+arch=('x86_64')
 license=('GPL-3.0-or-later')
 depends=(
+  'glibc'
+  'libgcc'
+  'libstdc++'
+  'procps-ng'               # pkill in upgrade/removal scriptlets
   'dolphin'
   'kio'
   'kcoreaddons'
+  'kjobwidgets'            # directly linked KIO application-launch UI
   'kservice'                # KDE MIME application associations
   'kwindowsystem'
   'kimageformats'           # PSD, PCX, HDR, TGA-RLE, AVIF/HEIF/JXL/EXR/JP2 (with their libraries)
   'qt6-5compat'             # legacy text encodings
   'poppler-qt6'             # continuous PDF rendering
-  'libreoffice'             # isolated headless Writer document conversion
   'kio-fuse'                # streaming access to SMB/KIO URLs
   'qt6-base>=6.8.0'
+  'qt6-wayland'             # native Plasma Wayland platform plugin
   'qt6-multimedia'
   'qt6-multimedia-ffmpeg'   # FFmpeg backend: almost every audio/video format
   'qt6-svg'
@@ -30,6 +34,8 @@ depends=(
   'hicolor-icon-theme'
 )
 optdepends=(
+  'libreoffice: Office document previews (DOC, DOCX, ODT and other supported formats)'
+  'kio-extras: SMB and additional network protocols'
   'libheif: HEIF/HEIC photos (kimageformats plugin)'
   'libavif: AVIF images (kimageformats plugin)'
   'libjxl: JPEG XL images (kimageformats plugin)'
@@ -39,16 +45,28 @@ optdepends=(
   'soundfont-fluid: General MIDI SoundFont for fluidsynth'
 )
 makedepends=('cmake' 'ninja' 'pkgconf')
-checkdepends=('dbus' 'imagemagick' 'python' 'qpdf' 'desktop-file-utils' 'nodejs')
+# Upstream Office tests generate/convert real documents; runtime stays optional.
+checkdepends=('libreoffice' 'dbus' 'imagemagick' 'python' 'qpdf' 'desktop-file-utils' 'nodejs')
 install=kdeglance.install
-source=("kdeglance-${pkgver}.tar.gz")
+source=("${url}/releases/download/v${pkgver}/kdeglance-${pkgver}.tar.gz")
 sha256sums=('bf94905e519c9ffa3e7d1401767c3e78462e942de8bbe6aa75a00941871a19af')
+
+prepare() {
+  # Fail on an unexpected archive layout/version instead of building another ref.
+  test -f "kdeglance-${pkgver}/CMakeLists.txt"
+  grep -Fq "project(kdeglance VERSION ${pkgver} LANGUAGES CXX)" \
+    "kdeglance-${pkgver}/CMakeLists.txt"
+}
 
 build() {
   cmake -B build -S "kdeglance-${pkgver}" -G Ninja \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_LIBDIR=lib \
     -DKDEGLANCE_QT_PLUGIN_DIR=lib/qt6/plugins \
+    -DBUILD_DOLPHIN_INTEGRATION=ON \
+    -DWITH_LIBRAW=ON \
+    -DWITH_KWINDOWSYSTEM=ON \
     -DBUILD_TESTING=ON
   # Source archives have deterministic mtimes; never reuse stale objects from
   # a previous extraction of the same version. Only compiler outputs are cleaned.

@@ -179,75 +179,52 @@ limited by LibreOffice; password-protected or damaged documents may fail.
 System-wide KWin bindings can intercept modified mouse gestures before the viewer
 receives them. KDEGlance does not change global shortcuts or mouse bindings.
 
-## Installation on CachyOS / Arch Linux
+## Installation on Arch Linux / CachyOS
 
-Download the tested **x86_64** package from
-[GitHub Releases](https://github.com/AlexGraveler/KDEGlance/releases), verify its
-checksum using the supplied `SHA256SUMS`, then install:
-
-```bash
-sha256sum -c SHA256SUMS
-sudo pacman -U ./kdeglance-2.0.0-1-x86_64.pkg.tar.zst
-```
-
-Run checksum verification in a directory containing all files listed in SHA256SUMS.
-Close and reopen all Dolphin windows after installation/update so they load the
-installed plugins. There is no required global Space binding, custom launcher,
-AT-SPI helper or Python runtime for the application. The resident viewer starts
-on demand through D-Bus/systemd.
-
-For **an older manually installed Python 1.x version**, first read
-[the migration notes](docs/INSTALL.md#updating-and-migration). A user-local launcher
-or systemd override can shadow `/usr/bin/kdeglance`; 2.0.0 does not delete those
-files or rewrite old user integration automatically.
-
-### Build from source
-
-Install the Arch build tools, then clone the repository (or extract the release
-source archive):
+Build the Arch package from the current packaging recipe. The same workflow
+applies to EndeavourOS. Run `makepkg` as a regular user:
 
 ```bash
-sudo pacman -S --needed base-devel cmake ninja pkgconf git
+sudo pacman -S --needed base-devel git
 git clone https://github.com/AlexGraveler/KDEGlance.git
-cd KDEGlance
-git checkout v2.0.0
-cd packaging/arch
-./make-source-tarball.sh
+cd KDEGlance/packaging/arch
 makepkg -si
 ```
 
-`makepkg` resolves the declared runtime/check dependencies, performs a Release
-build, runs the mandatory tests and asks Pacman to install. Do not run makepkg as
-root. The source archive has the same `packaging/arch` workflow.
+The recipe builds **KDEGlance 2.0.0-3** from the official
+[v2.0.0 source archive](https://github.com/AlexGraveler/KDEGlance/releases/download/v2.0.0/kdeglance-2.0.0.tar.gz)
+and verifies its SHA-256. It does not compile the changing `main` source tree.
+Use the current packaging files; checking out `v2.0.0` selects the older packaging
+included in that tag. `makepkg -si` resolves dependencies, builds the application,
+runs the tests and asks Pacman to install the package.
 
-For a development build with dependencies already installed:
+**LibreOffice is optional for using KDEGlance.** It enables Office document
+previews (DOC, DOCX, ODT and other supported formats). Without it, Office files
+show a dependency message; images, PDF, text, audio and video remain available.
+The complete test suite generates and converts Office documents, so LibreOffice
+is listed in `checkdepends` and is required when building with those tests.
+It is not a mandatory runtime dependency of the resulting package.
 
-```bash
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
-cmake --build build
-QT_QPA_PLATFORM=offscreen ctest --test-dir build --output-on-failure
-```
+Close and reopen Dolphin after installation or upgrading to load both plugins.
+The viewer starts on demand through D-Bus/systemd; no global Space binding or
+custom Dolphin launcher is required. User preferences are preserved.
 
-### Requirements and dependencies
+See [the Arch packaging instructions](packaging/arch/README.md) and
+[PKGBUILD](packaging/arch/PKGBUILD) for dependencies, checks and future version
+updates. The existing GitHub Release and its `2.0.0-1` binary asset are unchanged;
+this packaging revision does not replace that download.
 
-C++20 compiler, CMake 3.22+, Qt 6.8+, KDE Frameworks 6 and a KDE Plasma 6 user
-session. The release was verified on the versions listed in the validation report;
-a CMake minimum does not imply every older Dolphin build has been desktop-tested.
-The binary package records the Qt version it was built against as its minimum
-Qt runtime, because newer Qt plugins cannot load into an older Qt minor. Rebuild
-from source when using an older compatible toolchain.
+### Binary compatibility
 
-The Arch package declares: `dolphin`, `kio`, `kcoreaddons`, `kservice`,
-`kwindowsystem`, `kimageformats`, `qt6-base`, `qt6-multimedia`,
-`qt6-multimedia-ffmpeg`, `qt6-svg`, `qt6-imageformats`, `qt6-5compat`, `poppler-qt6`,
-`libreoffice`, `kio-fuse`, `libraw`, `ffmpeg` and `hicolor-icon-theme`.
-Additional codec/image libraries enable optional formats. Experimental MIDI needs
-`fluidsynth` and a compatible SoundFont such as `soundfont-fluid`.
+The recipe respects makepkg compiler flags. CachyOS builds can inherit native
+CPU flags or x86-64-v3 startup objects; use a standard Arch chroot when producing
+binaries for baseline x86_64 hardware. The binary package records the build-time
+Qt version as a minimum runtime dependency because newer Qt plugins cannot load
+on an older Qt minor.
 
-Build dependencies: CMake, Ninja, pkgconf and Arch base-devel. Test dependencies
-include D-Bus, Python, ImageMagick, qpdf and desktop-file-utils. Python runs developer
-fixture generation/desktop tests, not the installed C++ viewer. Node.js enables
-the KWin-script simulation tests.
+For an older manually installed Python 1.x version, first read
+[the migration notes](docs/INSTALL.md#updating-and-migration). The package does not
+remove user-local launchers or overwrite unrelated KDE configuration.
 
 ## Settings and removal
 
