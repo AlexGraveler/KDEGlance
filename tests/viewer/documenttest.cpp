@@ -185,12 +185,12 @@ private Q_SLOTS:
         QTest::addColumn<int>("factor");
         for (bool reflow : { false, true }) {
             const QByteArray prefix = reflow ? "reflow-" : "pages-";
-            QTest::newRow((prefix + "down").constData()) << reflow << QPoint(0,-120) << QPoint() << 1 << Qt::KeyboardModifiers() << 27;
-            QTest::newRow((prefix + "up").constData()) << reflow << QPoint(0,120) << QPoint() << 1 << Qt::KeyboardModifiers() << 27;
-            QTest::newRow((prefix + "multi-notch").constData()) << reflow << QPoint(0,-600) << QPoint() << 1 << Qt::KeyboardModifiers() << 27;
-            QTest::newRow((prefix + "diagonal-vertical").constData()) << reflow << QPoint(-30,-120) << QPoint() << 1 << Qt::KeyboardModifiers() << 27;
-            QTest::newRow((prefix + "fine-angle").constData()) << reflow << QPoint(0,-30) << QPoint() << 8 << Qt::KeyboardModifiers() << 27;
-            QTest::newRow((prefix + "pixels").constData()) << reflow << QPoint() << QPoint(0,-7) << 0 << Qt::KeyboardModifiers() << 27;
+            QTest::newRow((prefix + "down").constData()) << reflow << QPoint(0,-120) << QPoint() << 1 << Qt::KeyboardModifiers() << 54;
+            QTest::newRow((prefix + "up").constData()) << reflow << QPoint(0,120) << QPoint() << 1 << Qt::KeyboardModifiers() << 54;
+            QTest::newRow((prefix + "multi-notch").constData()) << reflow << QPoint(0,-600) << QPoint() << 1 << Qt::KeyboardModifiers() << 54;
+            QTest::newRow((prefix + "diagonal-vertical").constData()) << reflow << QPoint(-30,-120) << QPoint() << 1 << Qt::KeyboardModifiers() << 54;
+            QTest::newRow((prefix + "fine-angle").constData()) << reflow << QPoint(0,-30) << QPoint() << 8 << Qt::KeyboardModifiers() << 54;
+            QTest::newRow((prefix + "pixels").constData()) << reflow << QPoint() << QPoint(0,-7) << 0 << Qt::KeyboardModifiers() << 54;
             QTest::newRow((prefix + "horizontal").constData()) << reflow << QPoint(-120,0) << QPoint() << 1 << Qt::KeyboardModifiers() << 1;
             QTest::newRow((prefix + "diagonal-horizontal").constData()) << reflow << QPoint(-120,30) << QPoint() << 1 << Qt::KeyboardModifiers() << 1;
             QTest::newRow((prefix + "ctrl-zoom").constData()) << reflow << QPoint(0,120) << QPoint() << 1 << Qt::KeyboardModifiers(Qt::ControlModifier) << 1;
@@ -204,7 +204,7 @@ private Q_SLOTS:
         {
             QPdfWriter writer(file); writer.setResolution(72);
             QPainter painter(&writer);
-            for (int page=0;page<12;++page) {
+            for (int page=0;page<24;++page) {
                 if (page) writer.newPage();
                 for (int line=0;line<70;++line)
                     painter.drawText(20,20+line*10,u"PDF wheel scrolling regression sample"_s);
@@ -219,7 +219,7 @@ private Q_SLOTS:
         fast.resize(640,480); baseline->resize(640,480);
         fast.show(); baseline->show();
         fast.load(item(u"scroll.pdf"_s)); baseline->load(item(u"scroll.pdf"_s));
-        QVERIFY(waitFor([&]{return fast.pageCount()==12 && baseline->pageCount()==12;}));
+        QVERIFY(waitFor([&]{return fast.pageCount()==24 && baseline->pageCount()==24;}));
         if (reflow) {
             QKeyEvent key(QEvent::KeyPress,Qt::Key_R,Qt::NoModifier);
             fast.handleKey(&key); baseline->handleKey(&key);
@@ -254,7 +254,7 @@ private Q_SLOTS:
         QCOMPARE(h->value()-hstart,href->value()-hstart);
         if (!(modifiers & Qt::ControlModifier)) {
             QCOMPARE(v->value()-start,factor*(ref->value()-start));
-            if (!angle.isNull() && factor==27) QVERIFY(ref->value()!=start);
+            if (!angle.isNull() && factor==54) QVERIFY(ref->value()!=start);
         } else {
             QCOMPARE(v->value(),ref->value());
         }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2 — 2026-10-29
+
+- Fix slow vertical PDF mouse-wheel scrolling: double the speed of 2.0.1
+  (54x relative to 2.0.0), in page and text-reflow modes.
+- Preserve Ctrl+wheel zoom, horizontal scrolling and all other viewers.
+
 ## 2.0.1 — 2026-10-29
 
 - Increase vertical mouse-wheel scrolling twenty-sevenfold in the PDF viewer, including text reflow.

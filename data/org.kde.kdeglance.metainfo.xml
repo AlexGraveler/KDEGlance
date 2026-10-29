@@ -23,6 +23,7 @@
     <category>Utility</category>
   </categories>
   <releases>
+    <release version="2.0.2" date="2026-10-29"/>
     <release version="2.0.1" date="2026-10-29"/>
     <release version="2.0.0" date="2026-10-29"/>
   </releases>
