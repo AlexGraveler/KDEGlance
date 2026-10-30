@@ -183,40 +183,43 @@ limited by LibreOffice; password-protected or damaged documents may fail.
 System-wide KWin bindings can intercept modified mouse gestures before the viewer
 receives them. KDEGlance does not change global shortcuts or mouse bindings.
 
-## Installation on Arch Linux / CachyOS
+## ## Installation on Arch Linux / CachyOS
 
-Build the Arch package from the current packaging recipe. The same workflow
-applies to EndeavourOS. Run `makepkg` as a regular user:
+KDEGlance supports Arch Linux, CachyOS and EndeavourOS.
+
+**LibreOffice is completely optional.** You can install KDEGlance without it and still preview images, PDF files, text, audio and video.
+
+### Option 1: Install without LibreOffice (recommended)
 
 ```bash
 sudo pacman -S --needed base-devel git
 git clone https://github.com/AlexGraveler/KDEGlance.git
 cd KDEGlance/packaging/arch
+makepkg -si --nocheck
+```
+
+This installs KDEGlance without requiring LibreOffice. Office document previews will display a message explaining that LibreOffice is needed.
+
+### Option 2: Install with LibreOffice (Office document previews)
+
+```bash
+sudo pacman -S --needed base-devel git libreoffice-fresh
+git clone https://github.com/AlexGraveler/KDEGlance.git
+cd KDEGlance/packaging/arch
 makepkg -si
 ```
 
-The recipe builds **KDEGlance 2.0.2-1** from the official
-[v2.0.2 source archive](https://github.com/AlexGraveler/KDEGlance/releases/download/v2.0.2/kdeglance-2.0.2.tar.gz)
-and verifies its SHA-256. It does not compile the changing `main` source tree.
-Use the current packaging files; checking out `v2.0.0` selects the older packaging
-included in that tag. `makepkg -si` resolves dependencies, builds the application,
-runs the tests and asks Pacman to install the package.
+This enables previews of supported DOC, DOCX, ODT and other Office documents.
 
-**LibreOffice is optional for using KDEGlance.** It enables Office document
-previews (DOC, DOCX, ODT and other supported formats). Without it, Office files
-show a dependency message; images, PDF, text, audio and video remain available.
-The complete test suite generates and converts Office documents, so LibreOffice
-is listed in `checkdepends` and is required when building with those tests.
-It is not a mandatory runtime dependency of the resulting package.
+The standard build runs the full test suite, which currently requires LibreOffice. The `--nocheck` option skips package tests and their test-only dependencies.
 
-Close and reopen Dolphin after installation or upgrading to load both plugins.
-The viewer starts on demand through D-Bus/systemd; no global Space binding or
-custom Dolphin launcher is required. User preferences are preserved.
+### After installation
 
-See [the Arch packaging instructions](packaging/arch/README.md) and
-[PKGBUILD](packaging/arch/PKGBUILD) for dependencies, checks and future version
-updates. The existing GitHub Release and its `2.0.0-1` binary asset are unchanged;
-this packaging revision does not replace that download.
+Close and reopen Dolphin to activate KDEGlance. Select a file and press **Space** to preview it.
+
+User preferences are preserved when upgrading.
+
+See the [Arch packaging instructions](https://github.com/AlexGraveler/KDEGlance/blob/main/packaging/arch/README.md) and [PKGBUILD](https://github.com/AlexGraveler/KDEGlance/blob/main/packaging/arch/PKGBUILD) for additional information.
 
 ### Binary compatibility
 
