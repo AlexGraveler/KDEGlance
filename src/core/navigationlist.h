@@ -3,6 +3,7 @@
 #pragma once
 
 #include <QList>
+#include <QRectF>
 #include <QUrl>
 
 #include <optional>
@@ -52,6 +53,16 @@ private:
  * name). Hidden files are included only if `current` is hidden itself.
  */
 QList<QUrl> listDirectoryForNavigation(const QUrl &current);
+
+/*
+ * Up/Down navigation over the provider's item geometry (`rects[i]` belongs
+ * to the i-th URL; an invalid rect means unknown). In a one-column view
+ * (details, compact) Up/Down are previous/next. In a grid the target is the
+ * nearest row in `direction` (-1 up, +1 down), then the item horizontally
+ * closest to the current one. Returns nullopt at the first/last row, or a
+ * plain previous/next index when no usable geometry is known.
+ */
+std::optional<int> verticalNavigationTarget(const QList<QRectF> &rects, int current, int direction);
 
 // Natural, case-insensitive comparison: -1, 0, 1.
 int naturalCompare(const QString &a, const QString &b);

@@ -4,8 +4,10 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QSet>
 
 #include <algorithm>
+#include <cmath>
 
 namespace KDEGlance
 {
@@ -200,6 +202,53 @@ QList<QUrl> listDirectoryForNavigation(const QUrl &current)
         urls << QUrl::fromLocalFile(dir.absoluteFilePath(name));
     }
     return urls;
+}
+
+std::optional<int> verticalNavigationTarget(const QList<QRectF> &rects, int current, int direction)
+{
+    if (direction == 0 || current < 0 || current >= rects.size()) {
+        return std::nullopt;
+    }
+    const int delta = direction > 0 ? 1 : -1;
+    QSet<qint64> columns;
+    for (const QRectF &r : rects) {
+        if (r.isValid()) {
+            columns.insert(qRound64(r.x() * 10));
+        }
+    }
+    const QRectF here = rects.at(current);
+    if (columns.size() <= 1 || !here.isValid()) {
+        const int target = current + delta;
+        if (target < 0 || target >= rects.size()) {
+            return std::nullopt;
+        }
+        return target;
+    }
+    // Nearest row in that direction (2 px tolerance for rounding).
+    double rowDistance = -1;
+    for (const QRectF &r : rects) {
+        const double dy = (r.y() - here.y()) * delta;
+        if (r.isValid() && dy > 2 && (rowDistance < 0 || dy < rowDistance)) {
+            rowDistance = dy;
+        }
+    }
+    if (rowDistance < 0) {
+        return std::nullopt;
+    }
+    std::optional<int> best;
+    double bestDx = 0;
+    for (int i = 0; i < rects.size(); ++i) {
+        const QRectF &r = rects.at(i);
+        if (!r.isValid() || std::abs((r.y() - here.y()) * delta - rowDistance) > 2) {
+            continue;
+        }
+        const double dx = std::abs(r.center().x() - here.center().x());
+        if (!best || dx < bestDx) {
+            best = i;
+            bestDx = dx;
+        }
+    }
+    return best;
 }
 
 } // namespace KDEGlance

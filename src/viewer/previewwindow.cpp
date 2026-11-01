@@ -779,6 +779,11 @@ void PreviewWindow::keyPressEvent(QKeyEvent *event)
         event->accept();
         return;
     }
+    if ((key == Qt::Key_Up || key == Qt::Key_Down) && event->modifiers() == Qt::NoModifier) {
+        Q_EMIT verticalNavigateRequested(key == Qt::Key_Up ? -1 : 1);
+        event->accept();
+        return;
+    }
     if (m_current && m_current->handleKey(event)) {
         event->accept();
         return;
@@ -960,7 +965,8 @@ bool PreviewWindow::eventFilter(QObject *watched, QEvent *event)
         }
         if (m_current == m_textView || m_current == m_pdfView || m_current == m_officeView) {
             if (key->modifiers()==Qt::NoModifier && (key->key()==Qt::Key_Space || key->key()==Qt::Key_Escape
-                || key->key()==Qt::Key_Left || key->key()==Qt::Key_Right)) { keyPressEvent(key); return true; }
+                || key->key()==Qt::Key_Left || key->key()==Qt::Key_Right
+                || key->key()==Qt::Key_Up || key->key()==Qt::Key_Down)) { keyPressEvent(key); return true; }
             if (m_current->handleKey(key)) return true;
             // No permanent toolbar: retain normal keyboard document scrolling.
             if (key->modifiers()==Qt::NoModifier) {

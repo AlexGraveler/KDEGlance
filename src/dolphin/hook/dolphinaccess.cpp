@@ -36,6 +36,7 @@ struct DolphinAccess::Api {
     using VoidFn = void (*)(void *);
     using SetSelectedFn = void (*)(void *, int, int, int);
     using ScrollPosFn = void (*)(void *, int, int);
+    using RectFn = QRectF (*)(const void *, int);
 
     CountFn modelCount = nullptr;
     FileItemFn modelFileItem = nullptr;
@@ -52,6 +53,7 @@ struct DolphinAccess::Api {
     SetIntFn viewScrollToItem = nullptr; // older scrollToItem(int)
     BoolConstFn ctrlTypeAhead = nullptr;
     BoolConstFn ctrlSelectionMode = nullptr;
+    RectFn viewItemRect = nullptr; // KItemListView::itemRect(int) const
 };
 
 namespace
@@ -119,6 +121,7 @@ void DolphinAccess::resolve()
     a.viewScrollToItem = lookup<Api::SetIntFn>("_ZN13KItemListView12scrollToItemEi", &optionalMissing);
     a.ctrlTypeAhead = lookup<Api::BoolConstFn>("_ZNK19KItemListController23isSearchAsYouTypeActiveEv", &optionalMissing);
     a.ctrlSelectionMode = lookup<Api::BoolConstFn>("_ZNK19KItemListController13selectionModeEv", &optionalMissing);
+    a.viewItemRect = lookup<Api::RectFn>("_ZNK13KItemListView8itemRectEi", &optionalMissing);
 
     if (!m_missing.isEmpty()) {
         qCWarning(lcAccess) << "Dolphin internals not found, using fallbacks:" << m_missing;
@@ -273,9 +276,10 @@ int DolphinAccess::targetIndex(const QObject *model, const QObject *selection, c
     return target;
 }
 
-DolphinAccess::Snapshot DolphinAccess::collect(const QObject *model, int target) const
+DolphinAccess::Snapshot DolphinAccess::collect(const QObject *model, int target, const QObject *listView) const
 {
     const Api &a = *m_api;
+    const bool withRects = listView && a.viewItemRect;
     const int count = a.modelCount(model);
     Snapshot s;
     s.urls.reserve(count);
@@ -290,6 +294,9 @@ DolphinAccess::Snapshot DolphinAccess::collect(const QObject *model, int target)
         }
         s.urls.append(item.mostLocalUrl());
         s.modelUrls.append(item.url());
+        if (withRects) {
+            s.rects.append(a.viewItemRect(listView, i));
+        }
     }
     return s;
 }
@@ -308,7 +315,7 @@ std::optional<DolphinAccess::Snapshot> DolphinAccess::snapshot(QWidget *view, co
     if (target < 0) {
         return std::nullopt;
     }
-    Snapshot s = collect(model, target);
+    Snapshot s = collect(model, target, itemListViewOf(view));
     if (s.current < 0) {
         return std::nullopt;
     }

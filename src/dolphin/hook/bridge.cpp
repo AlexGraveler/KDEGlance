@@ -229,6 +229,7 @@ bool Bridge::trigger(QWidget *view, Origin origin, const std::optional<QUrl> &pr
 {
     const DolphinAccess &access = DolphinAccess::instance();
     QStringList urls;
+    QStringList rects; // "x,y,w,h" per url, for Up/Down by row (plain strings: safe over D-Bus)
     int index = 0;
     m_localToModelUrl.clear();
 
@@ -238,6 +239,10 @@ bool Bridge::trigger(QWidget *view, Origin origin, const std::optional<QUrl> &pr
             const QString local = snap->urls.at(i).toString();
             urls << local;
             m_localToModelUrl.insert(local, snap->modelUrls.at(i));
+            if (snap->rects.size() == snap->urls.size()) {
+                const QRectF r = snap->rects.at(i);
+                rects << u"%1,%2,%3,%4"_s.arg(r.x()).arg(r.y()).arg(r.width()).arg(r.height());
+            }
         }
         index = snap->current;
     } else if (!access.hasModelAccess()) {
@@ -264,7 +269,7 @@ bool Bridge::trigger(QWidget *view, Origin origin, const std::optional<QUrl> &pr
     if (m_sessionView == view && !m_sessionId.isEmpty() && origin == Origin::Hotkey) {
         m_sessionUrls = urls;
         m_viewerCurrent = urls.value(index);
-        sendToViewer(u"Toggle"_s, {urls, index, QVariantMap{{u"session"_s, m_sessionId}}});
+        sendToViewer(u"Toggle"_s, {urls, index, QVariantMap{{u"session"_s, m_sessionId}, {u"rects"_s, rects.join(u';')}}});
         return true;
     }
 
@@ -285,6 +290,7 @@ bool Bridge::trigger(QWidget *view, Origin origin, const std::optional<QUrl> &pr
         {u"session"_s, m_sessionId},
         {u"origin"_s, origin == Origin::Hotkey ? u"hotkey"_s : u"menu"_s},
         {u"listComplete"_s, access.hasModelAccess()},
+        {u"rects"_s, rects.join(u';')},
     };
     if (QWindow *w = view->window()->windowHandle(); w && w->screen()) {
         options.insert(u"screen"_s, w->screen()->name());

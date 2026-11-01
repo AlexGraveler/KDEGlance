@@ -120,6 +120,36 @@ private Q_SLOTS:
     }
 
     // ---- navigation ------------------------------------------------------------
+    void verticalNavigationGrid()
+    {
+        // f0 f1 f2 / f3 f4 f5 / f6  (3 columns, 100 px apart, rows 120 px apart)
+        QList<QRectF> grid;
+        for (int i = 0; i < 7; ++i) {
+            grid << QRectF((i % 3) * 100, (i / 3) * 120, 90, 110);
+        }
+        QCOMPARE(verticalNavigationTarget(grid, 1, 1), std::optional<int>(4));
+        QCOMPARE(verticalNavigationTarget(grid, 4, 1), std::optional<int>(6)); // nearest in a short last row
+        QCOMPARE(verticalNavigationTarget(grid, 6, 1), std::nullopt); // last row
+        QCOMPARE(verticalNavigationTarget(grid, 6, -1), std::optional<int>(3));
+        QCOMPARE(verticalNavigationTarget(grid, 2, -1), std::nullopt); // first row
+        // Folders are not in the list: a gap in the grid is skipped by geometry.
+        QList<QRectF> gaps{QRectF(0, 0, 90, 110), QRectF(200, 0, 90, 110), QRectF(100, 120, 90, 110)};
+        QCOMPARE(verticalNavigationTarget(gaps, 0, 1), std::optional<int>(2));
+    }
+    void verticalNavigationList()
+    {
+        QList<QRectF> list;
+        for (int i = 0; i < 4; ++i) {
+            list << QRectF(0, i * 30, 400, 28);
+        }
+        QCOMPARE(verticalNavigationTarget(list, 1, 1), std::optional<int>(2));
+        QCOMPARE(verticalNavigationTarget(list, 1, -1), std::optional<int>(0));
+        QCOMPARE(verticalNavigationTarget(list, 3, 1), std::nullopt);
+        // No geometry (fallback directory listing): previous/next.
+        const QList<QRectF> unknown(3);
+        QCOMPARE(verticalNavigationTarget(unknown, 0, 1), std::optional<int>(1));
+        QCOMPARE(verticalNavigationTarget(unknown, 0, -1), std::nullopt);
+    }
     void navigationSteps()
     {
         const QList<QUrl> urls{QUrl(u"file:///a"_s), QUrl(u"file:///b"_s), QUrl(u"file:///c"_s)};

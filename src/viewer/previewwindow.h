@@ -84,6 +84,7 @@ Q_SIGNALS:
     void openExternallyRequested(const QUrl &url);
     void closed();
     void navigateRequested(int delta);
+    void verticalNavigateRequested(int direction);
     void settingsModified();
     void settingsResetRequested();
     void currentContentReady();

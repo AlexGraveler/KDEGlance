@@ -55,6 +55,7 @@ ViewerApp::ViewerApp(QObject *parent)
     m_window = new PreviewWindow(&m_settings);
     connect(m_window, &PreviewWindow::closed, this, &ViewerApp::onWindowClosed);
     connect(m_window, &PreviewWindow::navigateRequested, this, &ViewerApp::Navigate);
+    connect(m_window, &PreviewWindow::verticalNavigateRequested, this, &ViewerApp::NavigateVertical);
     connect(m_window, &PreviewWindow::settingsModified, this, &ViewerApp::scheduleSave);
     connect(m_window, &PreviewWindow::settingsResetRequested, this, [this] {
         saveNow();
@@ -204,6 +205,7 @@ void ViewerApp::open(const QList<QUrl> &urls, int index, const QVariantMap &opti
         // Same session (e.g. the preview follows Dolphin's selection): just
         // show another file in the open window.
         m_nav.reset(urls, current);
+        storeItemRects(urls, options);
         showCurrent(false);
         return;
     }
@@ -221,6 +223,7 @@ void ViewerApp::open(const QList<QUrl> &urls, int index, const QVariantMap &opti
     applyWorkArea();
 
     m_nav.reset(urls, current);
+    storeItemRects(urls, options);
     showCurrent(true);
 
     // A single file without a provider: step through its folder.
@@ -275,6 +278,43 @@ void ViewerApp::Navigate(int delta)
     }
     if (!m_nav.step(delta > 0 ? 1 : -1)) {
         return; // at the first/last file
+    }
+    showCurrent(false);
+    Q_EMIT CurrentChanged(m_session, m_nav.current().toString());
+}
+
+void ViewerApp::storeItemRects(const QList<QUrl> &urls, const QVariantMap &options)
+{
+    if (!options.contains(u"rects"_s)) {
+        return; // e.g. "follow" requests: keep what the opening request sent
+    }
+    m_itemRects.clear();
+    const QStringList parts = options.value(u"rects"_s).toString().split(u';', Qt::SkipEmptyParts);
+    if (parts.size() != urls.size()) {
+        return;
+    }
+    for (int i = 0; i < urls.size(); ++i) {
+        const QStringList v = parts.at(i).split(u',');
+        if (v.size() == 4) {
+            m_itemRects.insert(urls.at(i), QRectF(v[0].toDouble(), v[1].toDouble(), v[2].toDouble(), v[3].toDouble()));
+        }
+    }
+}
+
+void ViewerApp::NavigateVertical(int direction)
+{
+    if (!m_window->isPreviewVisible() || direction == 0) {
+        return;
+    }
+    const QList<QUrl> &urls = m_nav.urls();
+    QList<QRectF> rects;
+    rects.reserve(urls.size());
+    for (const QUrl &u : urls) {
+        rects << m_itemRects.value(u); // invalid QRectF if unknown
+    }
+    const auto target = verticalNavigationTarget(rects, m_nav.index(), direction);
+    if (!target || !m_nav.setCurrent(urls.at(*target))) {
+        return; // first/last row
     }
     showCurrent(false);
     Q_EMIT CurrentChanged(m_session, m_nav.current().toString());
