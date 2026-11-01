@@ -11,7 +11,9 @@
 #include <QObject>
 #include <QPointer>
 #include <QRect>
+#include <QRectF>
 #include <QTimer>
+#include <QUrl>
 #include <QVariantMap>
 
 namespace KDEGlance
@@ -71,6 +73,9 @@ public Q_SLOTS:
     Q_SCRIPTABLE void ReportPhotoWindowState(const QString &session, bool managed);
     Q_SCRIPTABLE void ReportWorkAreas(const QString &json);
     Q_SCRIPTABLE void Navigate(int delta);
+    // Up/Down: the nearest file in the row above/below in Dolphin's view;
+    // in a one-column list (details/compact) the previous/next file.
+    Q_SCRIPTABLE void NavigateVertical(int direction);
     Q_SCRIPTABLE void Ping();
     Q_SCRIPTABLE void Quit();
 
@@ -97,6 +102,8 @@ private:
     QString m_session;
     quint64 m_localSessions = 0;
     QString m_targetScreen;
+    QHash<QUrl, QRectF> m_itemRects; // Dolphin view geometry per file, from the hook
+    void storeItemRects(const QList<QUrl> &urls, const QVariantMap &options);
     QHash<QString, QRect> m_workAreas;
     QString m_activeScreen;
     QTimer m_saveTimer;

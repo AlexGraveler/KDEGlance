@@ -3,6 +3,7 @@
 #pragma once
 
 #include <QList>
+#include <QRectF>
 #include <QString>
 #include <QUrl>
 
@@ -56,6 +57,9 @@ public:
         QList<QUrl> urls; // files (no folders) in display order, as local URLs
         QList<QUrl> modelUrls; // the same items as the model knows them
         int current = -1; // index into urls of the file to preview
+        // Item rectangle in the view (x, y, width, height) per url, for
+        // Up/Down navigation by row; empty if Dolphin does not expose it.
+        QList<QRectF> rects;
     };
 
     /*
@@ -80,7 +84,7 @@ private:
     DolphinAccess();
     void resolve();
     int targetIndex(const QObject *model, const QObject *selection, const std::optional<QUrl> &preferred) const;
-    Snapshot collect(const QObject *model, int target) const;
+    Snapshot collect(const QObject *model, int target, const QObject *listView = nullptr) const;
 
     struct Api;
     Api *m_api;
