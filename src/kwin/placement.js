@@ -109,6 +109,50 @@ function place(w, st) {
 
 const states = {};
 
+// One outstanding long-poll per preview: no idle geometry polling and no
+// resize-then-reposition correction. KWin issues a complete geometry first;
+// the client paints the corresponding zoom only when configure is delivered.
+function waitForGeometry(w,st) {
+    if(st.geometryWaiting || w.deleted || (w.caption && !w.caption.endsWith(" — KDEGlance"))) return;
+    st.geometryWaiting=true;
+    callDBus(SERVICE,PATH,IFACE,"WaitForGeometry",w.internalId.toString(),w.caption || "",function(reply) {
+        st.geometryWaiting=false;
+        if(w.deleted || !states[w.internalId.toString()]) return;
+        let p;
+        try {p=JSON.parse(reply);} catch(e) {return;}
+        if(p.ignored) return;
+        if(p.id) {
+            if(p.kind==="zoom" && (st.interactive || w.move || w.resize || w.fullScreen || w.maximizeMode || w.tile)) {
+                callDBus(SERVICE,PATH,IFACE,"GeometryRejected",p.id);
+                waitForGeometry(w,st);
+                return;
+            }
+            st.coordinated=true;
+            st.visualTransaction=p.kind==="zoom" || p.visual===true;
+            const old=geometrySnapshot(w);
+            let x=old.x,y=old.y;
+            if(p.kind==="initial") {
+                const a=workArea(st.output);
+                const center=st.anchor || (st.presented?{x:old.x+old.width/2,y:old.y+old.height/2}:{x:a.x+a.width/2,y:a.y+a.height/2});
+                x=center.x-p.width/2;y=center.y-p.height/2;
+            } else if(!st.interactive && !w.move && !w.resize && !w.fullScreen && !w.maximizeMode && !w.tile) {
+                const cursor=p.physical?workspace.cursorPos:{x:old.x+p.ax,y:old.y+p.ay};
+                x=p.ratio*old.x+(1-p.ratio)*cursor.x-p.tx;
+                y=p.ratio*old.y+(1-p.ratio)*cursor.y-p.ty;
+            }
+            if(Number.isFinite(x) && Number.isFinite(y) && p.width>0 && p.height>0) {
+                st.applying=true;
+                w.frameGeometry={x:x,y:y,width:p.width,height:p.height};
+                st.applying=false;
+                st.last=geometrySnapshot(w);
+                callDBus(SERVICE,PATH,IFACE,"GeometryIssued",JSON.stringify({id:p.id,dx:x-old.x,dy:y-old.y}));
+                st.presented=true;
+            }
+        }
+        waitForGeometry(w,st);
+    });
+}
+
 function track(w) {
     const id = w.internalId.toString();
     const previous = workspace.activeWindow;
@@ -137,7 +181,12 @@ function track(w) {
         }
     }
     refreshMode(w, st, reportPhotoState);
+    waitForGeometry(w,st);
     if(w.captionChanged) w.captionChanged.connect(function(){
+        st.visualTransaction=false;
+        waitForGeometry(w,st);
+        st.zoomQuery=(st.zoomQuery || 0)+1;
+        st.zoomOrigin=null;
         // File/module navigation is asynchronous; do not apply the previous
         // module's placement policy while its new Status reply is pending.
         st.photo=null;
@@ -151,8 +200,50 @@ function track(w) {
         if (st.applying || st.interactive || w.move || w.resize || w.fullScreen || w.maximizeMode || w.tile) {
             return;
         }
+        if(st.coordinated && st.visualTransaction) {st.last=geometrySnapshot(w);return;}
         if(st.photo !== false) {
-            // No geometry writes or D-Bus round trips on the photo wheel path.
+            const g=geometrySnapshot(w);
+            if(st.photo && st.last && (g.width!==st.last.width || g.height!==st.last.height)) {
+                if(!st.zoomOrigin) st.zoomOrigin={x:st.last.x,y:st.last.y};
+                const query=st.zoomQuery=(st.zoomQuery || 0)+1;
+                callDBus(SERVICE,PATH,IFACE,"PhotoZoomPlacement",function(reply) {
+                    if(w.deleted || st.zoomQuery!==query || st.interactive || w.move || w.resize || w.fullScreen || w.maximizeMode || w.tile) return;
+                    let p;
+                    try {p=JSON.parse(reply);} catch(e) {return;}
+                    const current=geometrySnapshot(w);
+                    // Fractional Wayland scaling can round a client size by
+                    // less than one logical pixel in the compositor.
+                    if(p.session!==st.session || Math.abs(p.width-current.width)>1 || Math.abs(p.height-current.height)>1
+                        || !Array.isArray(p.steps)) {st.zoomOrigin=null;return;}
+                    const steps=p.steps.filter(step=>step.serial>(st.zoomSerial || 0));
+                    if(!steps.length) {st.zoomOrigin=null;return;}
+                    if(p.clientPlaced) {
+                        // X11 clients can move themselves with true global
+                        // coordinates; do not apply their movement twice.
+                        st.zoomSerial=steps[steps.length-1].serial;
+                        st.zoomOrigin=null;
+                        return;
+                    }
+                    const first=steps[0];
+                    const base=st.zoomOrigin || current;
+                    const cursor=first.physical ? workspace.cursorPos : {x:base.x+first.ax,y:base.y+first.ay};
+                    if(!cursor || !Number.isFinite(cursor.x) || !Number.isFinite(cursor.y)) return;
+                    let x=base.x,y=base.y;
+                    // Compose every unapplied transform, so coalesced/rapid
+                    // wheel events cannot drop an earlier window movement.
+                    for(const step of steps) {
+                        x=step.ratio*x+(1-step.ratio)*cursor.x-step.tx;
+                        y=step.ratio*y+(1-step.ratio)*cursor.y-step.ty;
+                    }
+                    if(!Number.isFinite(x) || !Number.isFinite(y)) return;
+                    st.applying=true;
+                    w.frameGeometry={x:x,y:y,width:current.width,height:current.height};
+                    st.applying=false;
+                    st.zoomSerial=steps[steps.length-1].serial;
+                    st.zoomOrigin=null;
+                    st.last=geometrySnapshot(w);
+                });
+            }
             st.last=geometrySnapshot(w);
             return;
         }
@@ -160,6 +251,9 @@ function track(w) {
         st.last=geometrySnapshot(w);
     });
     w.interactiveMoveResizeStarted.connect(function () {
+        st.zoomQuery=(st.zoomQuery || 0)+1;
+        st.zoomOrigin=null;
+        if(st.photo) callDBus(SERVICE,PATH,IFACE,"DiscardPhotoZoomPlacement");
         st.interactive = true;
         refreshMode(w,st);
     });
@@ -171,6 +265,7 @@ function track(w) {
     });
     w.closed.connect(function () {
         delete states[id];
+        callDBus(SERVICE,PATH,IFACE,"EndGeometry",id);
         if (!st.focusLeft && st.previous && !st.previous.deleted && !st.previous.minimized) {
             workspace.activeWindow = st.previous;
         }

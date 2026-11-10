@@ -1,4 +1,4 @@
-# Testing KDEGlance 2.0.0
+# Testing KDEGlance 2.0.3
 
 ## Build and mandatory checks
 
@@ -38,6 +38,26 @@ failures must be distinguished from mandatory failures, not hidden.
 
 ## Desktop verification
 
+`tests/desktop/check-zoom.py` checks initial aspect fit for landscape/portrait
+images and videos, then measures cursor anchoring against actual KWin window
+coordinates while photo windows resize. It uses the development event adapter
+and isolated settings, restores the installed viewer, and does not alter monitor
+scaling. Use `--installed` after installing an RPM to check the shipped binary
+and KWin script. Run only with no existing preview open.
+
+Fractional DPI geometry can also be checked without changing screen settings:
+
+```bash
+QT_QPA_PLATFORM=offscreen QT_SCALE_FACTOR=1.5 KDEGLANCE_LANG=en \
+  build/tests/previewwindowtest initialFitMatchesContent wheelKeepsGlobalCursorWhileWindowResizes
+```
+
+Repeat with 1.25 and 2.0. These cases preserve fractional natural dimensions
+through the fit calculation. `mediaviewtest` also checks first-frame geometry
+before painting, rotation, fractional anchors and unchanged placement at zoom
+limits. The KWin simulation covers coalesced events, stale replies, native
+cursor coordinates, X11 client placement and managed window transitions.
+
 `tests/desktop/check-photo-reset.py` exercises real Wayland windows, Dolphin
 plugins, KWin state transitions, photo controls and independent reset with a
 **test-only Qt event adapter** built with `-DBUILD_DESKTOP_TEST_ADAPTER=ON`.
@@ -46,6 +66,18 @@ then restores the installed viewer. Run it only when desktop testing has been
 authorized and no user preview is open. The adapter is not shipped in the package.
 The environment variables documented in the script select a built/extracted or
 installed binary, plugin path, KWin script and output directory.
+
+`check-zoom-sequence.py [--installed]` records Qt paint/resize events and actual
+KWin geometry events. It checks every initial content paint, cursor anchors and
+one combined compositor geometry change per photo resize. Add `--cap` to grow
+the viewport to its screen-size limit and shrink back. Unit cases also
+exercise configure-before-confirmation, coalesced input and stale replies after
+navigation. `--record` requests explicit screen-capture permission through the
+desktop portal and records generated media on a separate neutral backdrop.
+`--smb URL` can be repeated for live KIO Fuse video, switching, cancellation and
+missing-file checks; it cannot be combined with recording. A reachable server
+is required. See the [transaction report](../packaging/fedora/GEOMETRY-TRANSACTIONS.md)
+for actual results and limitations.
 
 These tests validate application handlers and actual compositor states; they do
 not generate physical Wayland seat drags. Real-device motion, smoothness,

@@ -2,12 +2,14 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Real Wayland module Enter/KIO dispatch, synthetic Qt input; isolated associations.
 import json,os,pathlib,shutil,subprocess,time
+QDBUS = shutil.which("qdbus6") or shutil.which("qdbus-qt6")
+if not QDBUS: raise SystemExit("Install Qt 6 D-Bus tools (Fedora: qt6-qttools)")
 root=pathlib.Path(__file__).resolve().parents[2]
 out=pathlib.Path(os.environ.get('KDEGLANCE_TEST_OUTPUT',str(root/'build/desktop/default-open')));out.mkdir(parents=True,exist_ok=True)
 samples=root/'build/desktop/candidate-samples'
 report=[]
 def call(service,path,method,*args):
- r=subprocess.run(['qdbus6',service,path,method,*map(str,args)],capture_output=True,text=True,timeout=15)
+ r=subprocess.run([QDBUS,service,path,method,*map(str,args)],capture_output=True,text=True,timeout=15)
  if r.returncode:raise RuntimeError(f"{service} {method}: exit={r.returncode}, stdout={r.stdout!r}, stderr={r.stderr!r}")
  return r.stdout.strip()
 def v(method,*args):return call('org.kde.kdeglance','/Viewer',method,*args)
@@ -43,7 +45,7 @@ config=out/'config';data=out/'data';cache=out/'cache'
 captures=out/'captured.jsonl';captures.write_text('')
 capture=out/'capture.py';capture.write_text("import json,sys\nwith open(sys.argv[1],'a') as f:f.write(json.dumps(sys.argv[2:])+'\\n')\n")
 mimes=['image/jpeg','image/png','video/mp4','video/3gpp','audio/vnd.wave','audio/x-wav','audio/wav','text/plain','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.ms-word.document.macroEnabled.12','application/rtf','text/rtf','application/vnd.oasis.opendocument.text','application/vnd.oasis.opendocument.text-template','application/vnd.oasis.opendocument.text-flat-xml']
-(data/'applications/kdeglance-test-capture.desktop').write_text('[Desktop Entry]\nType=Application\nName=KDEGlance test capture\nNoDisplay=true\nTerminal=false\nExec=/usr/bin/python "'+str(capture)+'" "'+str(captures)+'" %U\nMimeType='+';'.join(mimes)+';\nX-KDE-Protocols=file,smb\n')
+(data/'applications/kdeglance-test-capture.desktop').write_text('[Desktop Entry]\nType=Application\nName=KDEGlance test capture\nNoDisplay=true\nTerminal=false\nExec=/usr/bin/python3 "'+str(capture)+'" "'+str(captures)+'" %U\nMimeType='+';'.join(mimes)+';\nX-KDE-Protocols=file,smb\n')
 (config/'mimeapps.list').write_text('[Default Applications]\n'+''.join(m+'=kdeglance-test-capture.desktop;\n' for m in mimes))
 env=os.environ.copy();env.update(QT_QPA_PLATFORM='wayland',QT_PLUGIN_PATH=str(root/'build/plugins'),XDG_CONFIG_HOME=str(config),XDG_DATA_HOME=str(data),XDG_CACHE_HOME=str(cache),KDEGLANCE_LANG='en',LD_PRELOAD=str(root/'build/tests/libsessionadapter.so'))
 subprocess.run(['update-desktop-database',str(data/'applications')],env=env,check=True,capture_output=True)
@@ -54,8 +56,8 @@ try:
  v('Quit');stopped=True;time.sleep(.5)
  def start():
   proc=subprocess.Popen([os.environ.get('KDEGLANCE_TEST_BINARY',str(root/'build/src/kdeglance')),'--service'],env=env,stdout=log,stderr=log)
-  check('Test service registered',wait(lambda:subprocess.run(['qdbus6','org.kde.kdeglance.Test.p'+str(proc.pid),'/KDEGlanceTest','State'],capture_output=True).returncode==0))
-  check('Source owns viewer D-Bus name',wait(lambda:subprocess.run(['qdbus6','org.freedesktop.DBus','/org/freedesktop/DBus','org.freedesktop.DBus.GetConnectionUnixProcessID','org.kde.kdeglance'],capture_output=True,text=True).stdout.strip()==str(proc.pid)))
+  check('Test service registered',wait(lambda:subprocess.run([QDBUS,'org.kde.kdeglance.Test.p'+str(proc.pid),'/KDEGlanceTest','State'],capture_output=True).returncode==0))
+  check('Source owns viewer D-Bus name',wait(lambda:subprocess.run([QDBUS,'org.freedesktop.DBus','/org/freedesktop/DBus','org.freedesktop.DBus.GetConnectionUnixProcessID','org.kde.kdeglance'],capture_output=True,text=True).stdout.strip()==str(proc.pid)))
   return proc
  viewer=start()
  for i,(filename,kind) in enumerate([('sample.jpg','image'),('long-video.mp4','media'),('audio.wav','media'),('unicode.txt','text'),('sample.pdf','pdf'),('sample.doc','office'),('sample.docx','office'),('sample.docm','office'),('sample.rtf','office'),('sample.odt','office'),('sample.ott','office'),('sample.fodt','office')]):

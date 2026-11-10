@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.3 — 2026-11-10
+
+- Merge Fedora 44 packaging into the common Arch/CachyOS source tree.
+- Coordinate image zoom and first image/video geometry with KWin configure.
+- Preserve cursor anchors and fractional-scale aspect ratios; handle paused video.
+- Retain optional LibreOffice runtime with distribution-neutral error messages.
+
+
 ## 2.0.2 — 2026-10-29
 
 - Fix slow vertical PDF mouse-wheel scrolling: double the speed of 2.0.1

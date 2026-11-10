@@ -25,6 +25,7 @@ class Settings;
 class VideoSurface : public QWidget
 {
     Q_OBJECT
+    Q_PROPERTY(QRectF imageRect READ imageRect)
 public:
     explicit VideoSurface(QWidget *parent = nullptr);
     void setFrame(const QVideoFrame &frame);
@@ -45,8 +46,10 @@ Q_SIGNALS:
 
 protected:
     void paintEvent(QPaintEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
+    void updateFrame();
     void clampPan();
     int m_rotation = 0;
     qreal m_zoom = 1.0;
@@ -81,6 +84,7 @@ public:
     void resetPresentation() override;
     SizeCategory sizeCategory() const override;
     QSize naturalSize() const override;
+    QSizeF naturalSizeF() const override;
     bool handleKey(QKeyEvent *event) override;
 
     // Plays a remote stream (RealMedia metafile entries etc.).

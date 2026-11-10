@@ -22,7 +22,9 @@ private Q_SLOTS:
     }
     void autoSizeRespectsMinimum()
     {
-        QCOMPARE(autoWindowSize(QSize(16, 16), QSize(1920, 1080), 0.7), MinimumWindowSize);
+        QCOMPARE(autoWindowSize(QSize(16, 16), QSize(1920, 1080), 0.7), QSize(280, 280));
+        QCOMPARE(autoWindowSize(QSize(180, 320), QSize(1920, 1080), 0.7), QSize(280, 498));
+        QCOMPARE(autoWindowSize(QSize(320, 180), QSize(1920, 1080), 0.7), QSize(356, 200));
     }
     void autoSizeAt125Percent()
     {

@@ -75,7 +75,7 @@ void OfficeView::load(const PreviewItem& item)
     if (!QFileInfo(office).isExecutable())
         office = QStandardPaths::findExecutable(QStringLiteral("libreoffice"));
     if (office.isEmpty()) {
-        Q_EMIT failed(tr_("Office preview needs LibreOffice (libreoffice-fresh or libreoffice-still)"));
+        Q_EMIT failed(tr_("Office preview needs LibreOffice"));
         return;
     }
     m_cache = std::make_unique<QTemporaryDir>();

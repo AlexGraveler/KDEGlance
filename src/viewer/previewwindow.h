@@ -3,9 +3,13 @@
 #pragma once
 
 #include "settings.h"
+#include "geometrymath.h"
 #include "views/contentview.h"
 
 #include <QElapsedTimer>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QPixmap>
 #include <QPointer>
 #include <QRect>
 #include <QTimer>
@@ -77,6 +81,15 @@ public:
     Q_INVOKABLE void endInteractiveResize();
     bool userResizedThisSession() const;
     PreviewItem currentItem() const;
+    QRectF photoZoomPlacement() const;
+    QJsonArray photoZoomSteps() const { return m_photoZoomSteps; }
+    void discardPhotoZoomPlacement();
+    void setCoordinatedGeometry(bool enabled);
+    QJsonObject geometryRequest() const { return m_geometryRequest; }
+    bool presentationReady() const { return m_sessionActive && m_contentReady && !m_staging; }
+    bool geometryAccepted() const { return m_geometryIssued; }
+    void geometryIssued(const QString &id, qreal dx, qreal dy);
+    void geometryRejected(const QString &id);
 
     static QSize defaultSizeFor(SizeCategory category);
 
@@ -87,6 +100,7 @@ Q_SIGNALS:
     void settingsModified();
     void settingsResetRequested();
     void currentContentReady();
+    void geometryRequested();
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -106,7 +120,7 @@ private:
     void onNaturalSizeChanged();
     void onCategoryChanged(SizeCategory category);
     void revealIfPending();
-    QSize targetSizeFor(SizeCategory category, const QSize &natural) const;
+    QSize targetSizeFor(SizeCategory category, const QSizeF &natural) const;
     void applyTargetSize(bool force);
     // Origin is explicit: resizeEvent alone never grants persistence.
     enum class ResizeOrigin { Automatic, Manual, Wheel, Compositor };
@@ -117,6 +131,12 @@ private:
     void toggleFullscreen();
     void updateShadow();
     void updateDecodeTarget();
+    void presentContent();
+    void requestInitialGeometry();
+    void requestZoom(qreal factor, const QPointF &anchor, bool physical);
+    void dispatchZoom();
+    void tryCommitGeometry();
+    void cancelGeometry();
 
     RemoteResolver *m_remote;
     Settings *m_settings;
@@ -153,6 +173,25 @@ private:
     QTimer m_resizeEndTimer;
     ResizeOrigin m_resizeOrigin = ResizeOrigin::Automatic;
     bool m_photoCompositorManaged = false;
+    QRectF m_photoZoomPlacement;
+    QElapsedTimer m_photoZoomClock;
+    QJsonArray m_photoZoomSteps;
+    qint64 m_photoZoomSerial = 0;
+    bool m_coordinatedGeometry = false;
+    bool m_staging = false;
+    bool m_contentReady = false;
+    QPixmap m_previousFrame;
+    QJsonObject m_geometryRequest;
+    quint64 m_geometrySerial = 0;
+    bool m_geometryIssued = false;
+    QPointF m_geometryDelta;
+    Geometry::ZoomState m_geometryZoom;
+    qreal m_desiredZoom = 0;
+    QPointF m_zoomAnchor;
+    bool m_zoomPhysical = false;
+    bool m_queuedWheel = false;
+    bool m_anchorAfterResize = false;
+    QTimer m_geometryDeadline;
     std::array<bool, 7> m_userSized{}; // per SizeCategory, this session
 
     // Middle button: single click closes, double click resets only the active module.

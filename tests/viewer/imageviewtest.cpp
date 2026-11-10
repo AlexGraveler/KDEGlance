@@ -44,6 +44,18 @@ private:
     }
 
 private Q_SLOTS:
+    void zoomDoesNotSnapNearFit()
+    {
+        ImageView view; view.resize(400,200); view.show();
+        QVERIFY(loadAndWait(view,u"wide.png"_s));
+        view.zoomAt(1.001,QPointF(213.25,87.5));
+        QVERIFY(qAbs(view.zoomScale()-1.001)<1e-10);
+        view.zoomAt(1000,QPointF(213.25,87.5));
+        const auto maximum=view.displayRect();
+        view.zoomAt(1000,QPointF(31.5,19.25));
+        QCOMPARE(view.displayRect(),maximum);
+    }
+
     void initTestCase()
     {
         QVERIFY(m_dir.isValid());

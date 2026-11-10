@@ -19,6 +19,7 @@
 #include <QScrollBar>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QJsonObject>
 #include <QKeyEvent>
 #include <QPainter>
 #include <QScreen>
@@ -243,6 +244,25 @@ PreviewWindow::PreviewWindow(Settings *settings, QWidget *parent)
         });
     }
     m_imageView->setWheelResizesWindow(true);
+    m_geometryDeadline.setSingleShot(true);
+    m_geometryDeadline.setInterval(5000);
+    connect(&m_geometryDeadline,&QTimer::timeout,this,[this] {
+        if(!m_geometryRequest.isEmpty()) onViewFailed(tr_("The compositor did not confirm the window geometry"));
+    });
+    connect(m_imageView,&ImageView::coordinatedZoomRequested,this,&PreviewWindow::requestZoom);
+    connect(m_imageView, &ImageView::wheelWindowPositionRequested, this,
+            [this](const QPointF &position, qreal ratio, const QPointF &translation, const QPointF &anchor, bool physical) {
+        if (m_current != m_imageView || m_resizing || isFullScreen() || isMaximized() || m_photoCompositorManaged) return;
+        m_photoZoomPlacement = QRectF(position, size());
+        m_photoZoomSteps.append(QJsonObject{{u"serial"_s, ++m_photoZoomSerial}, {u"ratio"_s, ratio},
+            {u"tx"_s, translation.x()}, {u"ty"_s, translation.y()},
+            {u"ax"_s, anchor.x()}, {u"ay"_s, anchor.y()}, {u"physical"_s, physical}});
+        while (m_photoZoomSteps.size() > 256) m_photoZoomSteps.removeFirst();
+        m_photoZoomClock.start();
+        // Wayland placement is handled by our KWin helper. On X11/offscreen
+        // QWidget can also apply the same request directly.
+        if (QGuiApplication::platformName() != u"wayland"_s) move(position.toPoint());
+    });
     connect(m_imageView, &ImageView::wheelDisplaySizeRequested, this, [this](const QSizeF& requested) {
         if(m_current!=m_imageView || m_resizing || isFullScreen() || isMaximized() || m_photoCompositorManaged || requested.isEmpty()) return;
         // While zooming out of a crop, keep the viewport until the entire
@@ -412,6 +432,19 @@ void PreviewWindow::prefetch(const QList<PreviewItem> &items)
 
 void PreviewWindow::showItem(const PreviewItem &item, bool newSession)
 {
+    cancelGeometry();
+    m_previousFrame = isVisible() && m_current && m_current->isVisible() ? m_current->grab() : QPixmap();
+    m_contentReady = false;
+    m_staging = true;
+    if(m_current) m_current->hide();
+    m_photoZoomPlacement = {};
+    m_photoZoomSteps = {};
+    if (item.url != m_item.url) {
+        // A free resize belongs to the current file. The next photo/video
+        // starts aspect-correct inside the same remembered bounds.
+        m_userSized[size_t(categoryIndex(SizeCategory::Image))] = false;
+        m_userSized[size_t(categoryIndex(SizeCategory::Video))] = false;
+    }
     ++m_itemGeneration;
     m_middleClickTimer.stop();
     if (m_current) m_current->unload();
@@ -430,10 +463,11 @@ void PreviewWindow::showItem(const PreviewItem &item, bool newSession)
         m_revealPending = !isVisible();
         updateDecodeTarget();
     }
-    setMinimumSize((item.type.kind == ContentKind::Image || item.type.kind == ContentKind::Svg || item.type.kind == ContentKind::Raw) ? QSize(1, 1) : Geometry::MinimumWindowSize);
+    setMinimumSize((item.type.kind == ContentKind::Image || item.type.kind == ContentKind::Svg || item.type.kind == ContentKind::Raw || item.type.kind == ContentKind::Video) ? QSize(1, 1) : Geometry::MinimumWindowSize);
     setWindowTitle(QFileInfo(item.path).fileName() + u" — KDEGlance"_s);
 
     if (!item.url.isLocalFile() && item.path.isEmpty()) {
+        m_staging = false; // a loading card is deliberate, not partial media
         switchTo(m_infoView);
         m_infoView->showLoading();
         m_category = sizeCategoryFor(item.type.kind);
@@ -447,7 +481,11 @@ void PreviewWindow::showItem(const PreviewItem &item, bool newSession)
 
 void PreviewWindow::loadLocalItem(const PreviewItem &item)
 {
-    setMinimumSize((item.type.kind == ContentKind::Image || item.type.kind == ContentKind::Svg || item.type.kind == ContentKind::Raw)
+    m_staging = item.type.kind==ContentKind::Image || item.type.kind==ContentKind::Raw
+        || item.type.kind==ContentKind::Svg || item.type.kind==ContentKind::Video;
+    m_contentReady = false;
+    if(m_staging && m_current) m_current->hide();
+    setMinimumSize((item.type.kind == ContentKind::Image || item.type.kind == ContentKind::Svg || item.type.kind == ContentKind::Raw || item.type.kind == ContentKind::Video)
                        ? QSize(1, 1) : Geometry::MinimumWindowSize);
     ContentView *target = m_infoView;
     switch (item.type.kind) {
@@ -492,6 +530,7 @@ void PreviewWindow::loadLocalItem(const PreviewItem &item)
 void PreviewWindow::switchTo(ContentView *view)
 {
     if (m_current == view) {
+        if(!m_staging) m_current->show();
         return;
     }
     if (m_current) {
@@ -500,12 +539,165 @@ void PreviewWindow::switchTo(ContentView *view)
     }
     m_current = view;
     m_current->setGeometry(rect());
+    if(!m_staging) m_current->show();
+    layoutOverlays();
+}
+
+void PreviewWindow::setCoordinatedGeometry(bool enabled)
+{
+    m_coordinatedGeometry=enabled;
+    m_imageView->setCoordinatedZoom(enabled);
+    if(!enabled && !m_geometryRequest.isEmpty()) cancelGeometry();
+}
+
+void PreviewWindow::cancelGeometry()
+{
+    m_geometryDeadline.stop();
+    m_geometryRequest={};
+    m_geometryIssued=false;
+    m_desiredZoom=0;
+    m_queuedWheel=false;
+    m_imageView->holdGeometryZoom(false);
+    setUpdatesEnabled(true);
+}
+
+void PreviewWindow::presentContent()
+{
+    m_staging=false;
+    m_previousFrame={};
+    m_current->setGeometry(rect());
+    if(m_current==m_imageView) m_imageView->fitToWindow();
     m_current->show();
     layoutOverlays();
+    setUpdatesEnabled(true);
+    updateShadow();
+    revealIfPending();
+    update();
+    Q_EMIT currentContentReady();
+}
+
+void PreviewWindow::requestInitialGeometry()
+{
+    // Navigation inside compositor-managed geometry must fit that viewport,
+    // not wait for a normal-window configure that KWin cannot issue there.
+    if(isFullScreen() || isMaximized() || m_photoCompositorManaged) {
+        presentContent();
+        return;
+    }
+    const QSize target=targetSizeFor(m_category,m_current->naturalSizeF());
+    if(!target.isValid()) return;
+    if(m_geometryRequest.value(u"kind"_s)==u"initial"_s
+        && m_geometryRequest.value(u"width"_s).toInt()==target.width()
+        && m_geometryRequest.value(u"height"_s).toInt()==target.height()) return;
+    m_geometryIssued=false;
+    m_geometryRequest={{u"id"_s,QString::number(++m_geometrySerial)},{u"kind"_s,u"initial"_s},
+        {u"visual"_s,m_current==m_imageView || (m_current==m_mediaView && m_mediaView->hasVideo())},
+        {u"width"_s,target.width()},{u"height"_s,target.height()}};
+    m_geometryDeadline.start();
+    if(!isVisible()) {
+        resizeProgrammatically(target);
+        m_current->setGeometry(rect());
+        // Map a transparent surface for the Wayland configure handshake.
+        // No image/video buffer is exposed until the compositor has issued it.
+        show();
+    }
+    Q_EMIT geometryRequested();
+}
+
+void PreviewWindow::requestZoom(qreal factor,const QPointF &anchor,bool physical)
+{
+    if(m_current!=m_imageView || m_staging || m_resizing) return;
+    m_desiredZoom=m_imageView->boundedScale((m_desiredZoom>0?m_desiredZoom:m_imageView->zoomScale())*factor);
+    m_zoomAnchor=anchor;
+    m_zoomPhysical=physical;
+    m_queuedWheel=true;
+    m_anchorAfterResize=!m_geometryRequest.isEmpty() && size()==QSize(m_geometryRequest.value(u"width"_s).toInt(),m_geometryRequest.value(u"height"_s).toInt());
+    if(m_geometryRequest.isEmpty()) dispatchZoom();
+}
+
+void PreviewWindow::dispatchZoom()
+{
+    if(!m_queuedWheel || m_desiredZoom<=0) return;
+    m_queuedWheel=false;
+    const Geometry::ZoomState before{m_imageView->zoomScale(),m_imageView->zoomOffset()};
+    const QSizeF units=m_imageView->naturalSizeF();
+    const QSizeF requested=units*m_desiredZoom;
+    QSize target=size();
+    if(!isFullScreen() && !isMaximized() && !m_photoCompositorManaged
+        && !(requested.width()<m_imageView->displayRect().width() && (requested.width()>width() || requested.height()>height()))) {
+        target=requested.scaled(requested.boundedTo(QSizeF(workArea().size())),Qt::KeepAspectRatio).toSize().expandedTo(QSize(1,1));
+    }
+    if(target==size()) {
+        m_imageView->zoomAt(m_desiredZoom,m_zoomAnchor);
+        m_desiredZoom=0;
+        return;
+    }
+    m_geometryZoom=Geometry::zoomAt(before,units,target,m_desiredZoom,m_zoomAnchor);
+    const qreal ratio=m_geometryZoom.scale/before.scale;
+    const QPointF translation=m_geometryZoom.offset-before.offset*ratio;
+    m_imageView->holdGeometryZoom(true);
+    m_geometryIssued=false;
+    m_geometryRequest={{u"id"_s,QString::number(++m_geometrySerial)},{u"kind"_s,u"zoom"_s},
+        {u"width"_s,target.width()},{u"height"_s,target.height()},{u"ratio"_s,ratio},
+        {u"tx"_s,translation.x()},{u"ty"_s,translation.y()},
+        {u"ax"_s,m_zoomAnchor.x()},{u"ay"_s,m_zoomAnchor.y()},{u"physical"_s,m_zoomPhysical}};
+    m_geometryDeadline.start();
+    Q_EMIT geometryRequested();
+}
+
+void PreviewWindow::geometryIssued(const QString &id,qreal dx,qreal dy)
+{
+    if(m_geometryRequest.value(u"id"_s).toString()!=id) return;
+    m_geometryIssued=true;
+    m_geometryDelta={dx,dy};
+    tryCommitGeometry();
+}
+
+void PreviewWindow::geometryRejected(const QString &id)
+{
+    if(m_geometryRequest.value(u"id"_s).toString()!=id) return;
+    cancelGeometry();
+    if(m_current==m_imageView && m_imageView->hasImage()) {
+        if(m_imageView->isFitMode()) m_imageView->fitToWindow();
+        else m_imageView->zoomAt(m_imageView->zoomScale(),QRectF(rect()).center());
+    }
+}
+
+void PreviewWindow::discardPhotoZoomPlacement()
+{
+    m_photoZoomPlacement={};m_photoZoomSteps={};
+    if(m_geometryRequest.value(u"kind"_s)==u"zoom"_s)
+        geometryRejected(m_geometryRequest.value(u"id"_s).toString());
+}
+
+void PreviewWindow::tryCommitGeometry()
+{
+    if(!m_geometryIssued || m_geometryRequest.isEmpty() || !isVisible()
+        || (windowHandle() && !windowHandle()->isExposed())) return;
+    const QSize target(m_geometryRequest.value(u"width"_s).toInt(),m_geometryRequest.value(u"height"_s).toInt());
+    if(size()!=target) return;
+    const bool initial=m_geometryRequest.value(u"kind"_s)==u"initial"_s;
+    m_geometryDeadline.stop();
+    m_geometryRequest={};
+    m_geometryIssued=false;
+    if(initial) presentContent();
+    else {
+        m_imageView->commitGeometryZoom(m_geometryZoom);
+        setUpdatesEnabled(true);
+        if(m_queuedWheel) {
+            if(!m_anchorAfterResize) m_zoomAnchor-=m_geometryDelta;
+            QTimer::singleShot(0,this,[this]{if(m_geometryRequest.isEmpty()) dispatchZoom();});
+        } else m_desiredZoom=0;
+    }
 }
 
 void PreviewWindow::closePreview()
 {
+    cancelGeometry();
+    m_staging=false;
+    m_previousFrame={};
+    m_photoZoomPlacement = {};
+    m_photoZoomSteps = {};
     ++m_itemGeneration;
     m_middleClickTimer.stop();
     m_revealTimer.stop();
@@ -531,6 +723,12 @@ void PreviewWindow::closePreview()
 
 void PreviewWindow::onViewReady()
 {
+    m_contentReady=true;
+    if(m_staging) {
+        if(m_coordinatedGeometry) requestInitialGeometry();
+        else { applyTargetSize(false); presentContent(); }
+        return;
+    }
     applyTargetSize(false);
     revealIfPending();
     Q_EMIT currentContentReady();
@@ -538,6 +736,10 @@ void PreviewWindow::onViewReady()
 
 void PreviewWindow::onViewFailed(const QString &message)
 {
+    cancelGeometry();
+    m_staging=false;
+    m_contentReady=true;
+    m_previousFrame={};
     const PreviewItem item = m_item;
     switchTo(m_infoView);
     m_infoView->showError(item, message);
@@ -549,11 +751,11 @@ void PreviewWindow::onViewFailed(const QString &message)
 
 void PreviewWindow::onNaturalSizeChanged()
 {
-    applyTargetSize(false);
-    // Size known: no reason to keep the window hidden any longer.
-    if (m_revealPending && m_current && m_current->naturalSize().isValid()) {
-        revealIfPending();
+    if(m_staging && isVisible() && m_coordinatedGeometry) {
+        if(m_contentReady) requestInitialGeometry();
+        return;
     }
+    applyTargetSize(false);
 }
 
 void PreviewWindow::onCategoryChanged(SizeCategory category)
@@ -562,17 +764,23 @@ void PreviewWindow::onCategoryChanged(SizeCategory category)
         return;
     }
     m_category = category;
-    applyTargetSize(true);
+    if(!m_staging) applyTargetSize(true);
 }
 
-QSize PreviewWindow::targetSizeFor(SizeCategory category, const QSize &natural) const
+QSize PreviewWindow::targetSizeFor(SizeCategory category, const QSizeF &natural) const
 {
     const QSize area = workArea().size();
     if (auto saved = m_settings->savedSize(category)) {
-        return Geometry::clampToArea(*saved, area, m_current==m_imageView?QSize(1,1):Geometry::MinimumWindowSize);
+        const QSize bounds = Geometry::clampToArea(*saved, area, m_current==m_imageView?QSize(1,1):Geometry::MinimumWindowSize);
+        if (natural.isValid() && (m_current == m_imageView || category == SizeCategory::Video)) {
+            const QSizeF fitted = natural.scaled(QSizeF(bounds), Qt::KeepAspectRatio);
+            return m_current == m_imageView ? fitted.toSize().expandedTo(QSize(1,1))
+                                           : Geometry::autoWindowSize(fitted, area, 1.0);
+        }
+        return bounds;
     }
     if (m_current == m_imageView && natural.isValid()) {
-        return natural.scaled(natural.boundedTo(area), Qt::KeepAspectRatio).expandedTo(QSize(1, 1));
+        return natural.scaled(natural.boundedTo(QSizeF(area)), Qt::KeepAspectRatio).toSize().expandedTo(QSize(1, 1));
     }
     if (m_current == m_infoView) {
         return Geometry::clampToArea(m_infoView->naturalSize(), area);
@@ -589,14 +797,15 @@ QSize PreviewWindow::targetSizeFor(SizeCategory category, const QSize &natural) 
 
 void PreviewWindow::applyTargetSize(bool force)
 {
+    if(m_staging && m_coordinatedGeometry && isVisible()) return;
     if (isFullScreen() || m_resizing || (m_current==m_imageView && (isMaximized() || m_photoCompositorManaged))) {
         return;
     }
     // Within a session a size the user chose is kept for this category.
-    if (!force && m_current != m_imageView && m_userSized[size_t(categoryIndex(m_category))]) {
+    if (!force && m_userSized[size_t(categoryIndex(m_category))]) {
         return;
     }
-    QSize target = targetSizeFor(m_category, m_current ? m_current->naturalSize() : QSize());
+    QSize target = targetSizeFor(m_category, m_current ? m_current->naturalSizeF() : QSizeF());
     if (!target.isValid()) {
         if (!isVisible()) {
             target = Geometry::clampToArea(defaultSizeFor(m_category), workArea().size());
@@ -617,6 +826,7 @@ void PreviewWindow::resizeProgrammatically(const QSize &size, ResizeOrigin origi
 
 void PreviewWindow::revealIfPending()
 {
+    if(m_staging) return;
     if (!m_revealPending || !m_sessionActive) {
         return;
     }
@@ -637,6 +847,7 @@ void PreviewWindow::setPhotoCompositorManaged(bool managed)
     if(m_current==m_imageView && !m_resizing)
         m_resizeOrigin=managed ? ResizeOrigin::Compositor : ResizeOrigin::Automatic;
     if(managed && m_current==m_imageView) {
+        discardPhotoZoomPlacement();
         // A compositor transition is never a manually chosen persistent size.
         m_resizing=false;
         m_resizeOrigin=ResizeOrigin::Compositor;
@@ -704,6 +915,11 @@ void PreviewWindow::resizeEvent(QResizeEvent *event)
         m_current->setGeometry(rect());
     }
     layoutOverlays();
+    if(!m_geometryRequest.isEmpty() && isVisible()
+        && (m_geometryRequest.value(u"kind"_s)==u"zoom"_s || !m_previousFrame.isNull())) {
+        if(!m_geometryIssued) setUpdatesEnabled(false);
+        tryCommitGeometry();
+    }
 }
 
 void PreviewWindow::layoutOverlays()
@@ -728,9 +944,10 @@ void PreviewWindow::layoutOverlays()
     m_handles[7]->setGeometry(w - c, h - b, c, b);
     // Corner handles also cover the short vertical part of the corner.
     for (QWidget *handle : m_handles) {
-        handle->setVisible(enabled);
+        handle->setVisible(enabled && !m_staging);
         handle->raise();
     }
+    m_cornerMask->setVisible(!m_staging);
     m_cornerMask->raise();
     if (m_toast->isVisible()) {
         m_toast->move((w - m_toast->width()) / 2, (h - m_toast->height()) / 2);
@@ -741,6 +958,12 @@ void PreviewWindow::layoutOverlays()
 void PreviewWindow::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
+    if(m_staging) {
+        p.setCompositionMode(QPainter::CompositionMode_Source);
+        p.fillRect(rect(),Qt::transparent);
+        if(!m_previousFrame.isNull()) p.drawPixmap(QPoint(),m_previousFrame);
+        return;
+    }
     p.setRenderHint(QPainter::Antialiasing);
     const qreal radius = (isFullScreen() || isMaximized()) ? 0.0 : Style::CornerRadius;
     p.setPen(Qt::NoPen);
@@ -819,7 +1042,17 @@ void PreviewWindow::changeEvent(QEvent *event)
 void PreviewWindow::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    updateShadow();
+    if(windowHandle()) windowHandle()->installEventFilter(this);
+    layoutOverlays();
+    if(!m_staging) updateShadow();
+}
+
+QRectF PreviewWindow::photoZoomPlacement() const
+{
+    if (!m_sessionActive || m_current != m_imageView || m_resizing || isFullScreen()
+        || isMaximized() || m_photoCompositorManaged || !m_photoZoomClock.isValid()
+        || m_photoZoomClock.elapsed() > 1000 || m_photoZoomPlacement.size() != QSizeF(size())) return {};
+    return m_photoZoomPlacement;
 }
 
 void PreviewWindow::hideEvent(QHideEvent *event)
@@ -921,6 +1154,7 @@ void PreviewWindow::resetActiveModule()
 
 bool PreviewWindow::eventFilter(QObject *watched, QEvent *event)
 {
+    if(watched==windowHandle() && event->type()==QEvent::Expose) tryCommitGeometry();
     auto *widget = qobject_cast<QWidget *>(watched);
     if (!widget || widget->window() != this) {
         return false;

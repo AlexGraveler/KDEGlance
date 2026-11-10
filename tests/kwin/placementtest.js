@@ -114,6 +114,11 @@ function makeEnv() {
         callDBus: (...args) => { env.calls.push(args); if(args[3]==="Status" && typeof args[4]==="function") {
             const deliver=()=>args[4](JSON.stringify({view:env.view,session:"local-1"}));
             if(env.delayedStatus) env.pendingReplies.push(deliver); else deliver();
+        } else if(args[3]==="WaitForGeometry" && env.geometryRequests) {
+            env.geometryReplies.push(args[6]);
+        } else if(args[3]==="PhotoZoomPlacement" && typeof args[4]==="function") {
+            const deliver=()=>args[4](JSON.stringify(env.zoomPlacement || {}));
+            if(env.delayedZoom) env.pendingReplies.push(deliver); else deliver();
         } },
         print: () => {},
         JSON,
@@ -140,6 +145,93 @@ function test(name, fn) {
     passed++;
     console.log("PASS " + name);
 }
+
+test("coordinated geometry is issued once before any client resize", () => {
+    const env=makeEnv();env.view="image";env.geometryRequests=true;env.geometryReplies=[];load(env,script);
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    const before=w.frameGeometry,writes=env.geometryWrites;
+    assert.strictEqual(env.geometryReplies.length,1);
+    env.geometryReplies.shift()(JSON.stringify({id:"1",kind:"zoom",session:"local-1",width:480,height:240,ratio:1.2,tx:0,ty:0,ax:100,ay:50,physical:false}));
+    assert.strictEqual(env.geometryWrites,writes+1);
+    assert(Math.abs(w.frameGeometry.x-(before.x-20))<1e-8);
+    assert(Math.abs(w.frameGeometry.y-(before.y-10))<1e-8);
+    const reply=env.calls.filter(c=>c[3]==="GeometryIssued");
+    assert.strictEqual(reply.length,1);
+    assert.strictEqual(JSON.parse(reply[0][4]).id,"1");
+    assert.strictEqual(env.geometryReplies.length,1);
+});
+
+test("coordinated zoom cannot resize a maximized window", () => {
+    const env=makeEnv();env.view="image";env.geometryRequests=true;env.geometryReplies=[];load(env,script);
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    w.maximizeMode=3;const writes=env.geometryWrites;
+    env.geometryReplies.shift()(JSON.stringify({id:"2",kind:"zoom",width:480,height:240,ratio:1.2,tx:0,ty:0,ax:100,ay:50,physical:false}));
+    assert.strictEqual(env.geometryWrites,writes);
+    assert(env.calls.some(c=>c[3]==="GeometryRejected" && c[4]==="2"));
+});
+
+test("photo wheel resize applies cursor placement only to matching geometry", () => {
+    const env=makeEnv(); env.view="image"; load(env,script);
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    const before=w.frameGeometry;
+    env.zoomPlacement={session:"local-1",width:476,height:238,steps:[{serial:1,ratio:1.2,tx:.25,ty:.5,ax:100,ay:50,physical:false}]};
+    w.clientResize(476,238);
+    assert(Math.abs(w.frameGeometry.x-(before.x-20.25))<1e-8);
+    assert(Math.abs(w.frameGeometry.y-(before.y-10.5))<1e-8);
+    const writes=env.geometryWrites;
+    w.clientResize(500,250); // stale reply has the old dimensions
+    assert.strictEqual(env.geometryWrites,writes);
+});
+
+test("delayed photo placement cannot overwrite a newer wheel or maximize", () => {
+    const env=makeEnv(); env.view="image"; load(env,script); env.delayedZoom=true;
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    env.zoomPlacement={session:"local-1",width:476,height:238,steps:[{serial:1,ratio:1.2,tx:0,ty:0,ax:100,ay:50,physical:false}]};
+    w.clientResize(476,238);
+    w.clientResize(566,283);
+    const writes=env.geometryWrites;
+    env.pendingReplies.shift()();
+    assert.strictEqual(env.geometryWrites,writes);
+    w.maximizeMode=3;
+    env.pendingReplies.shift()();
+    assert.strictEqual(env.geometryWrites,writes);
+});
+
+test("coalesced wheel events compose all unapplied transforms", () => {
+    const env=makeEnv(); env.view="image"; load(env,script); env.delayedZoom=true;
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    const before=w.frameGeometry;
+    w.clientResize(480,240);
+    w.clientResize(576,288.4); // fractional compositor rounding is accepted
+    env.zoomPlacement={session:"local-1",width:576,height:288,steps:[
+        {serial:1,ratio:1.2,tx:0,ty:0,ax:100,ay:50,physical:false},
+        {serial:2,ratio:1.2,tx:0,ty:0,ax:100,ay:50,physical:false}]};
+    env.pendingReplies.shift()();env.pendingReplies.shift()();
+    assert(Math.abs(w.frameGeometry.x-(before.x-44))<1e-8);
+    assert(Math.abs(w.frameGeometry.y-(before.y-22))<1e-8);
+});
+
+test("native wheel anchors use compositor cursor coordinates", () => {
+    const env=makeEnv(); env.view="image"; load(env,script);
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    const before=w.frameGeometry;
+    env.workspace.cursorPos={x:before.x+123.5,y:before.y+77.25};
+    env.zoomPlacement={session:"local-1",width:480,height:240,steps:[
+        {serial:1,ratio:1.2,tx:0,ty:0,ax:0,ay:0,physical:true}]};
+    w.clientResize(480,240);
+    assert(Math.abs(w.frameGeometry.x-(before.x-24.7))<1e-8);
+    assert(Math.abs(w.frameGeometry.y-(before.y-15.45))<1e-8);
+});
+
+test("X11 client placement is not applied twice by KWin", () => {
+    const env=makeEnv(); env.view="image"; load(env,script);
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    const writes=env.geometryWrites;
+    env.zoomPlacement={session:"local-1",clientPlaced:true,width:480,height:240,steps:[
+        {serial:1,ratio:1.2,tx:0,ty:0,ax:100,ay:50,physical:false}]};
+    w.clientResize(480,240);
+    assert.strictEqual(env.geometryWrites,writes);
+});
 
 test("centers in the work area and takes focus", () => {
     const env = makeEnv();

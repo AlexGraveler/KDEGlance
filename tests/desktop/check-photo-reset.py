@@ -2,13 +2,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Actual Wayland windows, Qt event injection; resize proposals are not physical seat drags.
 import json,os,pathlib,shutil,subprocess,time
+QDBUS = shutil.which("qdbus6") or shutil.which("qdbus-qt6")
+if not QDBUS: raise SystemExit("Install Qt 6 D-Bus tools (Fedora: qt6-qttools)")
 root=pathlib.Path(__file__).resolve().parents[2];out=pathlib.Path(os.environ.get('KDEGLANCE_TEST_OUTPUT',str(root/'build/desktop/photo-state')));out.mkdir(parents=True,exist_ok=True)
 samples=root/'build/desktop/candidate-samples';report=[];viewer=None;dolphin=None;stopped=False
 binary=os.environ.get('KDEGLANCE_TEST_BINARY',str(root/'build/src/kdeglance'))
 shotdir=os.environ.get('KDEGLANCE_RELEASE_SCREENSHOT_DIR')
 if shotdir:pathlib.Path(shotdir).mkdir(parents=True,exist_ok=True)
 def call(s,p,m,*args):
- r=subprocess.run(['qdbus6',s,p,m,*map(str,args)],capture_output=True,text=True,timeout=15)
+ r=subprocess.run([QDBUS,s,p,m,*map(str,args)],capture_output=True,text=True,timeout=15)
  if r.returncode:raise RuntimeError(f'{s} {m}: {r.returncode} {r.stdout!r} {r.stderr!r}')
  return r.stdout.strip()
 def v(m,*args):return call('org.kde.kdeglance','/Viewer',m,*args)
@@ -53,14 +55,14 @@ try:
  check('Existing preview is closed',not status()['visible']);v('Quit');stopped=True;time.sleep(.5)
  def start():
   p=subprocess.Popen([binary,'--service'],env=env,stdout=log,stderr=log)
-  check('Adapter registered',wait(lambda:subprocess.run(['qdbus6','org.kde.kdeglance.Test.p'+str(p.pid),'/KDEGlanceTest','State'],capture_output=True).returncode==0))
-  check('Own viewer service',wait(lambda:subprocess.run(['qdbus6','org.freedesktop.DBus','/org/freedesktop/DBus','org.freedesktop.DBus.GetConnectionUnixProcessID','org.kde.kdeglance'],capture_output=True,text=True).stdout.strip()==str(p.pid)))
+  check('Adapter registered',wait(lambda:subprocess.run([QDBUS,'org.kde.kdeglance.Test.p'+str(p.pid),'/KDEGlanceTest','State'],capture_output=True).returncode==0))
+  check('Own viewer service',wait(lambda:subprocess.run([QDBUS,'org.freedesktop.DBus','/org/freedesktop/DBus','org.freedesktop.DBus.GetConnectionUnixProcessID','org.kde.kdeglance'],capture_output=True,text=True).stdout.strip()==str(p.pid)))
   return p
  viewer=start()
  nav=out/'KDEGlancePhotoResetNavigation';nav.mkdir(exist_ok=True)
  for src,dst in [('sample.jpg','01-image.jpg'),('long-video.mp4','02-video.mp4'),('unicode.txt','03-text.txt')]:shutil.copy2(samples/src,nav/dst)
  dolphin=subprocess.Popen(['dolphin','--new-window','--select',str(nav/'01-image.jpg')],env=env,stdout=log,stderr=log)
- check('Dolphin bridge registered',wait(lambda:subprocess.run(['qdbus6','org.kde.dolphin-'+str(dolphin.pid),'/KDEGlanceBridge','State'],capture_output=True).returncode==0))
+ check('Dolphin bridge registered',wait(lambda:subprocess.run([QDBUS,'org.kde.dolphin-'+str(dolphin.pid),'/KDEGlanceBridge','State'],capture_output=True).returncode==0))
  script('for(const w of workspace.windowList())if(w.pid==='+str(dolphin.pid)+')workspace.activeWindow=w;')
  adapter(dolphin.pid,'FocusFileView');adapter(dolphin.pid,'Key','Space')
  check('Space opens natural image',wait(lambda:status().get('hasImage')) and (status()['width'],status()['height'],status()['zoom'])==(320,240,1),status())

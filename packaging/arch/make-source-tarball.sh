@@ -12,20 +12,27 @@ files=set()
 for directory in ('src','data','tests'):
  for p in (root/directory).rglob('*'):
   if '__pycache__' in p.parts or p.suffix in ('.pyc','.moc'):continue
-  if p.parent==root/'tests/desktop' and p.name not in {'sessionadapter.cpp','check-photo-reset.py','check-default-open.py','check-system-open.py','run-desktop-checks.sh','MANUAL-CHECKLIST.md'}:continue
+  if p.parent==root/'tests/desktop' and p.name not in {'sessionadapter.cpp','check-photo-reset.py','check-default-open.py','check-system-open.py','check-zoom.py','check-zoom-sequence.py','record-test-scene.py','geometrybackdrop.cpp','run-desktop-checks.sh','MANUAL-CHECKLIST.md'}:continue
   if p.is_symlink():raise SystemExit('Refusing source symlink: '+str(p.relative_to(root)))
   if p.is_file():files.add(p.relative_to(root))
 for file in ('CMakeLists.txt','config-kdeglance.h.in','COPYING','LICENSE','README.md','CHANGELOG.md',
  'RELEASE-NOTES.md','CONTRIBUTING.md','VERSION','.gitignore',
  'docs/ARCHITECTURE.md','docs/FORMATS.md','docs/TESTING.md','docs/INSTALL.md',
  'docs/RELEASE-VALIDATION.md','docs/MANUAL-ACCEPTANCE.md',
- 'packaging/arch/PKGBUILD','packaging/arch/kdeglance.install',
+ 'packaging/arch/kdeglance.install',
  'packaging/arch/make-source-tarball.sh','packaging/arch/test-in-clean-chroot.sh',
  'packaging/arch/test-package-lifecycle.sh',
+ 'packaging/fedora/kdeglance.spec','packaging/fedora/README.md',
+ 'packaging/fedora/VALIDATION.md','packaging/fedora/make-source-tarball.py',
+ 'packaging/fedora/ZOOM-VALIDATION.md','packaging/fedora/GEOMETRY-TRANSACTIONS.md',
+ 'packaging/fedora/test-installed.py','packaging/fedora/test-without-libreoffice.sh',
  'packaging/verify-release.py'):
  p=root/file
  if not p.is_file():raise SystemExit('Missing release source: '+file)
  files.add(pathlib.Path(file))
+for p in (root/'packaging/fedora').rglob('*'):
+ if 'rpmbuild' in p.parts or '__pycache__' in p.parts:continue
+ if p.is_file() and p.suffix in {'.py','.sh','.md','.spec'}:files.add(p.relative_to(root))
 for p in (root/'docs/screenshots').glob('*.png'):files.add(p.relative_to(root))
 archive=here/(name+'.tar.gz')
 with archive.open('wb') as raw,gzip.GzipFile(filename='',mode='wb',fileobj=raw,mtime=0) as zipped,tarfile.open(fileobj=zipped,mode='w') as tar:

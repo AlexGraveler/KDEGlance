@@ -1,4 +1,4 @@
-# Install, update and remove KDEGlance 2.0.0
+# Install, update and remove KDEGlance 2.0.3
 
 ## Binary package
 
@@ -7,7 +7,7 @@ The release supplies a tested CachyOS/Arch **x86_64** package. Download it from
 release checksums, then install it using the system package manager:
 
 ```bash
-sudo pacman -U ./kdeglance-2.0.0-1-x86_64.pkg.tar.zst
+sudo pacman -U ./kdeglance-2.0.3-1-x86_64.pkg.tar.zst
 ```
 
 Pacman resolves the declared dependencies. Close and reopen Dolphin afterward;
@@ -26,14 +26,14 @@ Use a regular user account, not root:
 ```bash
 git clone https://github.com/AlexGraveler/KDEGlance.git
 cd KDEGlance
-git checkout v2.0.0
+git checkout v2.0.3
 cd packaging/arch
 ./make-source-tarball.sh
 makepkg -si
 ```
 
-Or extract `kdeglance-2.0.0.tar.gz` and run the last three commands from its
-`packaging/arch` directory. The helper creates a clean local source archive and
+The release source archive excludes the external Arch PKGBUILD to avoid a
+self-referential source checksum. Obtain the recipe from the matching Git tag. The helper creates a clean local source archive and
 updates its SHA-256 in PKGBUILD. `makepkg` builds Release, runs check(), then asks
 Pacman to install. Do not skip the mandatory tests for release artifacts.
 
@@ -146,3 +146,8 @@ clean chroot and test install/reinstall/removal in its disposable copy. It needs
 root privileges and devtools. It must not be described as executed unless the
 validation report records that run. The release also checks package lifecycle in
 an isolated temporary Pacman root without removing the running desktop package.
+
+## Fedora 44
+
+See [the Fedora recipe and installation instructions](../packaging/fedora/README.md)
+and [current binary availability](../packaging/fedora/RELEASE-2.0.3.md).

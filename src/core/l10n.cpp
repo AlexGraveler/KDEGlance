@@ -19,6 +19,7 @@ const QHash<QString, QString> &russian()
         {QStringLiteral("Active module settings were reset to defaults"), QStringLiteral("Настройки текущего модуля сброшены")},
         {QStringLiteral("Loading…"), QStringLiteral("Загрузка…")},
         {QStringLiteral("Loading document…"), QStringLiteral("Загрузка документа…")},
+        {QStringLiteral("Office preview needs LibreOffice"), QStringLiteral("Для просмотра офисных документов нужен LibreOffice")},
         {QStringLiteral("Fit width"), QStringLiteral("По ширине")},
         {QStringLiteral("Reflow text"), QStringLiteral("Перекомпоновка текста")},
         {QStringLiteral("Auto encoding"), QStringLiteral("Кодировка автоматически")},

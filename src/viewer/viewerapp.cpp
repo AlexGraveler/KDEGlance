@@ -53,6 +53,15 @@ ViewerApp::ViewerApp(QObject *parent)
     m_lastSaved = QJsonDocument(m_settings.toJson()).toJson(QJsonDocument::Compact);
 
     m_window = new PreviewWindow(&m_settings);
+    connect(m_window,&PreviewWindow::geometryRequested,this,&ViewerApp::deliverGeometry);
+    m_geometryHeartbeat.setSingleShot(true);
+    m_geometryHeartbeat.setInterval(10000);
+    connect(&m_geometryHeartbeat,&QTimer::timeout,this,[this] {
+        if(m_geometryWaiting) {
+            QDBusConnection::sessionBus().send(m_geometryWait.createReply(QVariantList{u"{}"_s}));
+            m_geometryWaiting=false;
+        }
+    });
     connect(m_window, &PreviewWindow::closed, this, &ViewerApp::onWindowClosed);
     connect(m_window, &PreviewWindow::navigateRequested, this, &ViewerApp::Navigate);
     connect(m_window, &PreviewWindow::settingsModified, this, &ViewerApp::scheduleSave);
@@ -250,6 +259,7 @@ void ViewerApp::showCurrent(bool newSession)
 {
     const PreviewItem item = makeItem(m_nav.current());
     const bool wasVisible = m_window->isPreviewVisible();
+    m_window->setCoordinatedGeometry(QGuiApplication::platformName()==u"wayland"_s && m_kwin && m_kwin->isScriptLoaded());
     m_window->showItem(item, newSession);
     if (!wasVisible) {
         Q_EMIT VisibilityChanged(true);
@@ -324,6 +334,11 @@ QString ViewerApp::Status()
 {
     QJsonObject o;
     o[u"visible"_s] = m_window->isPreviewVisible();
+    o[u"presentationReady"_s] = m_window->presentationReady();
+    o[u"geometryRequest"_s] = m_window->geometryRequest();
+    o[u"geometryWaiting"_s] = m_geometryWaiting;
+    o[u"geometryAccepted"_s] = m_window->geometryAccepted();
+    o[u"contentShown"_s] = m_window->currentView() && m_window->currentView()->isVisible();
     o[u"windowShown"_s] = m_window->isVisible();
     o[u"session"_s] = m_session;
     o[u"url"_s] = m_nav.current().toString();
@@ -360,6 +375,8 @@ QString ViewerApp::Status()
         o[u"videoFrames"_s] = mv->surface()->framesShown();
         o[u"videoRotation"_s] = mv->surface()->rotation();
         o[u"videoZoom"_s] = mv->surface()->zoom();
+        const auto r = mv->surface()->imageRect();
+        o[u"videoRect"_s] = QJsonArray{r.x(),r.y(),r.width(),r.height()};
         o[u"playing"_s] = mv->player()->playbackState() == QMediaPlayer::PlayingState;
         o[u"loaded"_s] = mv->isLoaded();
         o[u"title"_s] = mv->title();
@@ -398,6 +415,78 @@ QString ViewerApp::Status()
     o[u"syncSelection"_s] = m_settings.syncSelection();
     o[u"kwinScript"_s] = m_kwin && m_kwin->isScriptLoaded();
     return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
+QString ViewerApp::PhotoZoomPlacement()
+{
+    const QRectF r = m_window->photoZoomPlacement();
+    if (r.isEmpty()) return u"{}"_s;
+    return QString::fromUtf8(QJsonDocument(QJsonObject{{u"session"_s, m_session},
+        {u"clientPlaced"_s, QGuiApplication::platformName() != u"wayland"_s},
+        {u"steps"_s, m_window->photoZoomSteps()}, {u"width"_s, r.width()}, {u"height"_s, r.height()}}).toJson(QJsonDocument::Compact));
+}
+
+void ViewerApp::DiscardPhotoZoomPlacement()
+{
+    m_window->discardPhotoZoomPlacement();
+}
+
+QString ViewerApp::WaitForGeometry(const QString &windowToken,const QString &caption)
+{
+    if(caption!=m_window->windowTitle() && !caption.startsWith(m_window->windowTitle()+u" <"_s))
+        return u"{\"ignored\":true}"_s;
+    if(m_closedGeometryTokens.contains(windowToken)) return u"{}"_s;
+    if(!calledFromDBus()) return u"{}"_s;
+    if(m_geometryToken!=windowToken) {
+        m_geometryToken=windowToken;
+        m_geometryDelivered.clear();
+    }
+    if(m_geometryWaiting) QDBusConnection::sessionBus().send(m_geometryWait.createReply(QVariantList{u"{}"_s}));
+    setDelayedReply(true);
+    m_geometryWait=message();
+    m_geometryWaiting=true;
+    m_geometryHeartbeat.start();
+    deliverGeometry();
+    return {};
+}
+
+void ViewerApp::EndGeometry(const QString &windowToken)
+{
+    if(m_closedGeometryTokens.size()>128) m_closedGeometryTokens.clear();
+    m_closedGeometryTokens.insert(windowToken);
+    if(m_geometryToken==windowToken) {
+        m_geometryDelivered.clear();
+        if(m_geometryWaiting) {
+            QDBusConnection::sessionBus().send(m_geometryWait.createReply(QVariantList{u"{}"_s}));
+            m_geometryWaiting=false;
+            m_geometryHeartbeat.stop();
+        }
+    }
+}
+
+void ViewerApp::deliverGeometry()
+{
+    if(!m_geometryWaiting) return;
+    QJsonObject request=m_window->geometryRequest();
+    const QString id=request.value(u"id"_s).toString();
+    if(id.isEmpty() || id==m_geometryDelivered) return;
+    request[u"session"_s]=m_session;
+    m_geometryDelivered=id;
+    const auto json=QString::fromUtf8(QJsonDocument(request).toJson(QJsonDocument::Compact));
+    QDBusConnection::sessionBus().send(m_geometryWait.createReply(QVariantList{json}));
+    m_geometryWaiting=false;
+    m_geometryHeartbeat.stop();
+}
+
+void ViewerApp::GeometryIssued(const QString &json)
+{
+    const auto p=QJsonDocument::fromJson(json.toUtf8()).object();
+    m_window->geometryIssued(p.value(u"id"_s).toString(),p.value(u"dx"_s).toDouble(),p.value(u"dy"_s).toDouble());
+}
+
+void ViewerApp::GeometryRejected(const QString &id)
+{
+    m_window->geometryRejected(id);
 }
 
 void ViewerApp::ShowSettings()

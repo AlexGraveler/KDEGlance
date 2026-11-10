@@ -19,16 +19,41 @@
 #include <QComboBox>
 #include <QJsonArray>
 #include <QSignalSpy>
+#include <QDateTime>
+#include <QScreen>
 
 class SessionAdapter : public QObject {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.kde.kdeglance.TestAdapter")
+    QJsonArray m_trace;
+    bool m_tracing = false;
+    bool eventFilter(QObject* object, QEvent* event) override {
+        auto* w=qobject_cast<QWidget*>(object);
+        if(m_tracing && w && (event->type()==QEvent::Paint || event->type()==QEvent::Resize || event->type()==QEvent::Show)
+            && (w->objectName()==QStringLiteral("KDEGlancePreview") || w->objectName()==QStringLiteral("imageView") || w->objectName()==QStringLiteral("videoSurface"))) {
+            const QRectF r=w->property(w->objectName()==QStringLiteral("imageView")?"displayRect":"imageRect").toRectF();
+            m_trace.append(QJsonObject{{"t",QDateTime::currentMSecsSinceEpoch()},{"event",int(event->type())},
+                {"widget",w->objectName()},{"width",w->width()},{"height",w->height()},
+                {"rect",QJsonArray{r.x(),r.y(),r.width(),r.height()}}});
+        }
+        return QObject::eventFilter(object,event);
+    }
     QWidget* targetWindow() const {
         for(auto* w:QApplication::topLevelWidgets())
             if(w->isVisible() && w->objectName()==QStringLiteral("KDEGlancePreview")) return w;
         return QApplication::activeWindow();
     }
 public Q_SLOTS:
+    Q_SCRIPTABLE QString ScreenInfo() {
+        auto* preview=targetWindow();
+        auto* screen=preview && preview->screen()?preview->screen():QGuiApplication::primaryScreen();
+        const auto s=screen->geometry(),a=screen->availableGeometry();
+        return QString::fromUtf8(QJsonDocument(QJsonObject{{"screen",QJsonArray{s.x(),s.y(),s.width(),s.height()}},
+            {"work",QJsonArray{a.x(),a.y(),a.width(),a.height()}}}).toJson(QJsonDocument::Compact));
+    }
+    Q_SCRIPTABLE void StartTrace() { m_trace={}; m_tracing=true; qApp->installEventFilter(this); }
+    Q_SCRIPTABLE QString Trace() const { return QString::fromUtf8(QJsonDocument(m_trace).toJson(QJsonDocument::Compact)); }
+    Q_SCRIPTABLE void RecordGeometry(const QString& json) { if(m_tracing) m_trace.append(QJsonDocument::fromJson(json.toUtf8()).object()); }
     Q_SCRIPTABLE void StoreWindowInfo(const QString& data) { setProperty("windowInfo", data); }
     Q_SCRIPTABLE QString WindowInfo() const { return property("windowInfo").toString(); }
     Q_SCRIPTABLE bool FocusFileView() {

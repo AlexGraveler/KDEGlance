@@ -377,14 +377,9 @@ void ImageView::zoomAt(qreal newScale, const QPointF &anchor)
     }
     const QSizeF units = rotatedUnits();
     const QSizeF viewport(size());
-    const qreal fit = Geometry::fitScale(units, viewport);
     newScale = std::clamp(newScale, minScale(), maxScale());
-    // Snap back into "fit" mode when the user zooms out to the fitted size.
-    if (std::abs(newScale - fit) / fit < 0.02) {
-        setZoom(Geometry::centered(units, viewport, fit), true);
-        return;
-    }
-    setZoom(Geometry::zoomAt(m_zoom, units, viewport, newScale, anchor), false);
+    const qreal fit = Geometry::fitScale(units, viewport, m_fitUpscale ? std::numeric_limits<qreal>::max() : 1.0);
+    setZoom(Geometry::zoomAt(m_zoom, units, viewport, newScale, anchor), qFuzzyCompare(newScale, fit));
 }
 
 void ImageView::zoomByFactor(qreal factor, const QPointF &anchor)
@@ -601,11 +596,21 @@ void ImageView::paintEvent(QPaintEvent *)
     }
 }
 
+bool ImageView::event(QEvent *event)
+{
+    const bool handled = ContentView::event(event);
+    if (event->type() == QEvent::DevicePixelRatioChange && m_natural.isValid()) {
+        if (m_fit) fitToWindow();
+        Q_EMIT naturalSizeChanged(naturalSize());
+    }
+    return handled;
+}
+
 void ImageView::resizeEvent(QResizeEvent *event)
 {
     ContentView::resizeEvent(event);
     layoutButtons();
-    if (!hasImage() || m_wheelTransaction) {
+    if (!hasImage() || m_wheelTransaction || m_geometryZoomPending) {
         return;
     }
     if (m_fit) {
@@ -638,15 +643,30 @@ void ImageView::wheelEvent(QWheelEvent *event)
     }
     // One notch ≈ 19 %; smooth for high-resolution wheels and touchpads.
     const qreal factor = std::pow(2.0, steps / 4.0);
+    if (m_coordinatedZoom && m_wheelResizesWindow && !window()->isFullScreen()) {
+        Q_EMIT coordinatedZoomRequested(factor,event->position(),event->spontaneous());
+        event->accept();
+        return;
+    }
     if (m_wheelResizesWindow && !window()->isFullScreen()) {
         // One image state, in viewport coordinates. The host may grow/shrink
         // the viewport, but cannot replace the requested scale with a fit scale.
         const auto before = m_zoom;
         const qreal scale = std::clamp(before.scale * factor, minScale(), maxScale());
+        if (qFuzzyCompare(scale, before.scale)) { event->accept(); return; }
+        const QSize previousSize = size();
+        const QPointF imagePoint = (event->position() - before.offset) / before.scale;
         m_wheelTransaction = true;
         Q_EMIT wheelDisplaySizeRequested(rotatedUnits() * scale);
         m_wheelTransaction = false;
         setZoom(Geometry::zoomAt(before, rotatedUnits(), QSizeF(size()), scale, event->position()), false);
+        if (size() != previousSize) {
+            // Resizing a fitted photo leaves no pan range. Move the window
+            // instead so the same image point stays under the screen cursor.
+            const qreal ratio = scale / before.scale;
+            Q_EMIT wheelWindowPositionRequested(event->globalPosition() - m_zoom.offset - imagePoint * scale,
+                ratio, m_zoom.offset - before.offset * ratio, event->position(), event->spontaneous());
+        }
     } else zoomByFactor(factor, event->position());
     event->accept();
 }

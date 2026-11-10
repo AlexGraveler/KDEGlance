@@ -120,7 +120,7 @@ QList<FormatInfo> buildList()
     l.append({u"ram"_s, u"RealMedia metafile RAM"_s, {u"ram"_s}, K::StreamLink, T::Experimental, B::StreamLink, QString(), QString()});
     l.append({u"text"_s,u"Text"_s,{u"txt"_s,u"log"_s,u"md"_s,u"csv"_s,u"ini"_s,u"json"_s,u"xml"_s,u"yaml"_s,u"yml"_s,u"conf"_s,u"toml"_s},K::Text,T::Mandatory,B::Document,QString(),u"qt6-5compat"_s});
     l.append({u"pdf"_s,u"PDF"_s,{u"pdf"_s},K::Pdf,T::Mandatory,B::Document,QString(),u"poppler-qt6"_s});
-    l.append({u"office"_s,u"Office documents"_s,{u"doc"_s,u"docx"_s,u"docm"_s,u"rtf"_s,u"odt"_s,u"ott"_s,u"fodt"_s},K::Office,T::Mandatory,B::Document,QString(),u"libreoffice-fresh or libreoffice-still"_s});
+    l.append({u"office"_s,u"Office documents"_s,{u"doc"_s,u"docx"_s,u"docm"_s,u"rtf"_s,u"odt"_s,u"ott"_s,u"fodt"_s},K::Office,T::Mandatory,B::Document,QString(),u"LibreOffice (Fedora: libreoffice-writer; Arch: libreoffice-fresh or libreoffice-still)"_s});
     l.append({u"pages"_s,u"Apple Pages"_s,{u"pages"_s},K::Office,T::Experimental,B::Document,QString(),u"LibreOffice import filter"_s});
     return l;
 }

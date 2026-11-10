@@ -1,4 +1,4 @@
-# KDEGlance 2.0.0 architecture
+# KDEGlance 2.0.3 architecture
 
 The application is C++20/Qt6/KF6. The resident viewer, Dolphin plugins, settings
 schema and D-Bus identities are preserved from the accepted local implementation.
@@ -51,14 +51,27 @@ uses the oriented photo's ratio.
 Wheel events retain one precise image state across the host resize transaction.
 The host caps only viewport growth; the requested image scale can continue beyond
 it. Zoom-out of a crop keeps the viewport until the photo fits, then shrinks it.
-Cursor anchoring uses local coordinates and `Geometry::clampPan` enforces bounds.
+Both photo and video zoom use `Geometry::zoomAt`/`clampPan`. Natural dimensions
+remain floating point through DPI conversion, with rounding only for the final
+window size. Saved photo/video dimensions bound the initial aspect-correct
+window; manual free resizing within the session keeps the chosen rectangle.
+
+On Plasma Wayland the existing KWin helper waits for geometry requests before
+the client resizes. It assigns position and size together, using the compositor's
+cursor coordinates. The viewer holds its transform until both the matching
+configure and request confirmation arrive; it cannot paint a resized buffer
+with the previous zoom. Further wheel events accumulate behind the single
+in-flight request. Initial media is staged until dimensions and geometry agree.
+Request IDs and preview-window binding reject stale replies. Interactive moves
+discard pending placement. X11 and the client-placement fallback retain the
+bounded affine sequence exposed through `PhotoZoomPlacement`.
 No free pan offset exists on an axis whose photo fits entirely in the viewport.
 
 Plain drag pans overflowing photo content; Alt-drag requests system window move.
 A fitted photo can move the window with a plain drag. Neither operation persists
 image zoom or pan. Image transformations are view-only.
 
-After initial photo placement, KWin owns position/tile/maximize. The script does
+Outside explicit wheel placement, KWin owns photo position/tile/maximize. The script does
 not restore a stale top-left over a compositor transition. Managed-state reports
 carry the preview session ID, so a late report from an old surface is ignored.
 KWin global configuration and bindings are never rewritten.

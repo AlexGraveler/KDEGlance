@@ -1,4 +1,4 @@
-# KDEGlance 2.0.2
+# KDEGlance 2.0.3
 
 Quick Look-style file previews for **Dolphin on KDE Plasma 6**. Select a file and
 press **Space** to inspect it in a minimal, frameless window. Browse the folder
@@ -7,8 +7,9 @@ application.
 
 KDEGlance 2.0.0 is the C++20 / Qt 6 / KDE Frameworks 6 release of the project.
 The supported and tested desktop is **CachyOS, Plasma 6, Wayland and KWin**.
-Arch Linux with equivalent dependencies is the packaging target. No binaries for
-other distributions or architectures are supplied by this release.
+Arch Linux with equivalent dependencies and Fedora 44 KDE Plasma share one
+codebase. Fedora RPM build instructions are included; availability of tested
+binary packages is recorded separately for each platform.
 
 [Downloads and releases](https://github.com/AlexGraveler/KDEGlance/releases) ·
 [Release notes](RELEASE-NOTES.md) · [Installation](docs/INSTALL.md) ·
@@ -182,6 +183,27 @@ limited by LibreOffice; password-protected or damaged documents may fail.
 
 System-wide KWin bindings can intercept modified mouse gestures before the viewer
 receives them. KDEGlance does not change global shortcuts or mouse bindings.
+
+## Fedora 44
+
+KDEGlance 2.0.3 includes a Fedora 44 RPM recipe and the common Wayland geometry,
+image/video aspect-fit and Zoom to Cursor fixes developed on Fedora.
+See [Fedora installation and reproducible builds](packaging/fedora/README.md)
+and [the 2.0.3 build status](packaging/fedora/RELEASE-2.0.3.md).
+
+Build on Fedora 44 from this repository:
+
+```bash
+sudo dnf install rpm-build rpmdevtools dnf5-plugins
+sudo dnf builddep packaging/fedora/kdeglance.spec
+python3 packaging/fedora/make-source-tarball.py
+rpmbuild -ba --define "_topdir $PWD/packaging/fedora/rpmbuild" packaging/fedora/kdeglance.spec
+sudo dnf install ./packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.0.3-1.fc44.*.rpm
+```
+
+The binary RPM does not require LibreOffice. To enable Office previews separately,
+install `libreoffice-writer`. Reopen Dolphin after installation; no global
+shortcuts, MIME defaults or KWin settings need changing.
 
 ## ## Installation on Arch Linux / CachyOS
 

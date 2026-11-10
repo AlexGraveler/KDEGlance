@@ -42,6 +42,9 @@ public:
     {
         return QSize();
     }
+    // Keep fractional device-independent dimensions until the final window
+    // size is rounded; rounding each axis first changes the aspect ratio.
+    virtual QSizeF naturalSizeF() const { return naturalSize(); }
     // Lets the view use keys that are not reserved by the window.
     virtual bool handleKey(QKeyEvent *event)
     {

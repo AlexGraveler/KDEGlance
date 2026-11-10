@@ -7,10 +7,13 @@
 #include "views/contentview.h"
 
 #include <QDBusVariant>
+#include <QDBusContext>
+#include <QDBusMessage>
 #include <QHash>
 #include <QObject>
 #include <QPointer>
 #include <QRect>
+#include <QSet>
 #include <QTimer>
 #include <QVariantMap>
 
@@ -33,7 +36,7 @@ class SettingsDialog;
  * Dolphin instance that opened the preview can follow along (selection sync)
  * while other Dolphin windows ignore them.
  */
-class ViewerApp : public QObject
+class ViewerApp : public QObject, protected QDBusContext
 {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.kde.kdeglance.Viewer")
@@ -64,6 +67,12 @@ public Q_SLOTS:
     Q_SCRIPTABLE bool IsVisible();
     Q_SCRIPTABLE QString CurrentUrl();
     Q_SCRIPTABLE QString Status();
+    Q_SCRIPTABLE QString PhotoZoomPlacement();
+    Q_SCRIPTABLE void DiscardPhotoZoomPlacement();
+    Q_SCRIPTABLE QString WaitForGeometry(const QString &windowToken, const QString &caption);
+    Q_SCRIPTABLE void EndGeometry(const QString &windowToken);
+    Q_SCRIPTABLE void GeometryIssued(const QString &json);
+    Q_SCRIPTABLE void GeometryRejected(const QString &id);
     Q_SCRIPTABLE void ShowSettings();
     Q_SCRIPTABLE void ResetSettings();
     // Scripting/tests: change one setting (names as in settings.json).
@@ -88,6 +97,7 @@ private:
     void prefetchNeighbours();
     void applyWorkArea();
     void loadDirectoryAsync(const QUrl &current, const QString &session);
+    void deliverGeometry();
 
     Settings m_settings;
     PreviewWindow *m_window = nullptr;
@@ -101,6 +111,12 @@ private:
     QString m_activeScreen;
     QTimer m_saveTimer;
     QByteArray m_lastSaved;
+    QDBusMessage m_geometryWait;
+    bool m_geometryWaiting = false;
+    QString m_geometryDelivered;
+    QString m_geometryToken;
+    QSet<QString> m_closedGeometryTokens;
+    QTimer m_geometryHeartbeat;
 };
 
 } // namespace KDEGlance

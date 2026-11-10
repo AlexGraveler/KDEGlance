@@ -70,6 +70,8 @@ set_tests_properties(av1fallback PROPERTIES
 # Explicitly opt in; never injected into normal Dolphin installations.
 option(BUILD_DESKTOP_TEST_ADAPTER "Build a Qt event adapter for dedicated real desktop test processes" OFF)
 if(BUILD_DESKTOP_TEST_ADAPTER)
+    add_executable(geometrybackdrop desktop/geometrybackdrop.cpp)
+    target_link_libraries(geometrybackdrop PRIVATE Qt6::Widgets)
     add_library(sessionadapter MODULE desktop/sessionadapter.cpp)
     target_link_libraries(sessionadapter PRIVATE Qt6::Widgets Qt6::DBus Qt6::Test)
 endif()

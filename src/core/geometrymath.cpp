@@ -8,20 +8,23 @@
 namespace KDEGlance::Geometry
 {
 
-QSize autoWindowSize(const QSize &contentSize, const QSize &workArea, double fraction, const QSize &minimum)
+QSize autoWindowSize(const QSizeF &contentSize, const QSize &workArea, double fraction, const QSize &minimum)
 {
     const QSize area = workArea.isValid() && !workArea.isEmpty() ? workArea : QSize(1280, 800);
     const QSize limit(std::max(minimum.width(), int(area.width() * fraction)), std::max(minimum.height(), int(area.height() * fraction)));
     if (!contentSize.isValid() || contentSize.isEmpty()) {
         return QSize(std::min(limit.width(), 640), std::min(limit.height(), 480)).expandedTo(minimum);
     }
-    QSize size = contentSize;
+    QSizeF size = contentSize;
     if (size.width() > limit.width() || size.height() > limit.height()) {
         size = contentSize.scaled(limit, Qt::KeepAspectRatio);
     }
-    size = size.expandedTo(minimum);
-    // The minimum could push a very wide/tall result past the work area.
-    return size.boundedTo(area.expandedTo(minimum));
+    // Grow both axes together: expanding each independently changes the
+    // window's aspect ratio (notably for small portrait videos).
+    const qreal grow = std::max({qreal(1), qreal(minimum.width()) / size.width(),
+                                qreal(minimum.height()) / size.height()});
+    size *= grow;
+    return size.scaled(size.boundedTo(QSizeF(area)), Qt::KeepAspectRatio).toSize();
 }
 
 QSize clampToArea(const QSize &size, const QSize &workArea, const QSize &minimum)
@@ -154,6 +157,9 @@ ZoomState clampPan(const ZoomState &state, const QSizeF &imageSize, const QSizeF
 
 ZoomState zoomAt(const ZoomState &state, const QSizeF &imageSize, const QSizeF &viewport, qreal newScale, const QPointF &anchor)
 {
+    if (qFuzzyCompare(state.scale, newScale)) {
+        return state; // hitting a zoom limit must not move an existing view
+    }
     if (state.scale <= 0) {
         return clampPan(centered(imageSize, viewport, newScale), imageSize, viewport);
     }

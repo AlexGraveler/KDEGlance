@@ -16,6 +16,7 @@
 #include <QPushButton>
 #include <QScrollBar>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTextCodec>
@@ -400,6 +401,9 @@ private Q_SLOTS:
 
     void officeCancelStopsProcess()
     {
+        if (!QFileInfo(u"/usr/bin/libreoffice"_s).isExecutable()
+            && QStandardPaths::findExecutable(u"libreoffice"_s).isEmpty())
+            QSKIP("LibreOffice is not installed");
         OfficeView v;
         QSignalSpy failed(&v, &ContentView::failed);
         v.load(item(u"unicode.txt"_s));
@@ -408,6 +412,26 @@ private Q_SLOTS:
         QVERIFY(!v.converting());
         QTest::qWait(300);
         QVERIFY(failed.isEmpty());
+    }
+    void officeUnavailableKeepsOtherViewsWorking()
+    {
+        if (QFileInfo(u"/usr/bin/libreoffice"_s).isExecutable()
+            || !QStandardPaths::findExecutable(u"libreoffice"_s).isEmpty())
+            QSKIP("Run in the without-LibreOffice sandbox to check this path");
+        OfficeView office;
+        QSignalSpy failed(&office, &ContentView::failed);
+        office.load(item(u"unicode.txt"_s));
+        QCOMPARE(failed.size(), 1);
+        QVERIFY(failed.first().first().toString().contains(u"LibreOffice"_s));
+        QVERIFY(!office.converting());
+        TextView text;
+        text.load(item(u"unicode.txt"_s));
+        QVERIFY(waitFor([&] { return text.editor()->toPlainText().contains(u"English"_s); }));
+        PdfView pdf;
+        pdf.resize(700, 600);
+        pdf.show();
+        pdf.load(item(u"pages.pdf"_s));
+        QVERIFY(waitFor([&] { return pdf.cachedPages() > 0; }));
     }
 };
 QTEST_MAIN(DocumentTest)

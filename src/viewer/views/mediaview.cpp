@@ -3,6 +3,7 @@
 #include "mediaview.h"
 
 #include "formatregistry.h"
+#include "geometrymath.h"
 #include "l10n.h"
 #include "mediacontrols.h"
 #include "midisupport.h"
@@ -25,6 +26,7 @@
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include <cmath>
+#include <limits>
 
 using namespace Qt::StringLiterals;
 
@@ -56,6 +58,7 @@ void VideoSurface::setFrame(const QVideoFrame &frame)
     m_frame = frame;
     m_dirty = true;
     ++m_frames;
+    updateFrame();
     update();
 }
 
@@ -99,37 +102,41 @@ void VideoSurface::rotateLeft()
     m_rotation = (m_rotation + 270) % 360;
     m_dirty = true;
     m_pan = {};
+    updateFrame();
     update();
 }
 void VideoSurface::resetPresentation()
 {
-    m_rotation=0; m_zoom=1; m_pan={}; m_dirty=true; update();
+    m_rotation=0; m_zoom=1; m_pan={}; m_dirty=true; updateFrame(); update();
 }
 void VideoSurface::zoomAt(qreal zoom, const QPointF &anchor)
 {
     zoom = std::clamp(zoom, 0.1, 16.0);
-    const QPointF center = QRectF(rect()).center();
-    m_pan = anchor - center - (anchor - center - m_pan) * (zoom / m_zoom);
+    if (m_size.isEmpty() || qFuzzyCompare(zoom, m_zoom)) return;
+    const qreal fit = Geometry::fitScale(m_size, size(), std::numeric_limits<qreal>::max());
+    const Geometry::ZoomState before{fit * m_zoom, imageRect().topLeft()};
+    const auto after = Geometry::zoomAt(before, m_size, size(), fit * zoom, anchor);
     m_zoom = zoom;
-    clampPan();
+    m_pan = after.offset - Geometry::centered(m_size, size(), after.scale).offset;
     update();
 }
 void VideoSurface::clampPan()
 {
-    const auto draw = imageRect().size();
-    const qreal x = std::max<qreal>(0, (draw.width() - width()) / 2);
-    const qreal y = std::max<qreal>(0, (draw.height() - height()) / 2);
-    m_pan.setX(std::clamp(m_pan.x(), -x, x));
-    m_pan.setY(std::clamp(m_pan.y(), -y, y));
+    if (m_size.isEmpty() || size().isEmpty()) { m_pan = {}; return; }
+    const qreal scale = Geometry::fitScale(m_size, size(), std::numeric_limits<qreal>::max()) * m_zoom;
+    const auto center = Geometry::centered(m_size, size(), scale);
+    m_pan = Geometry::clampPan({scale, center.offset + m_pan}, m_size, size()).offset - center.offset;
 }
 void VideoSurface::panBy(const QPointF &delta) { m_pan += delta; clampPan(); update(); }
 
-void VideoSurface::paintEvent(QPaintEvent *)
+void VideoSurface::resizeEvent(QResizeEvent *event)
 {
-    QPainter p(this);
-    p.setClipPath(Style::windowShapeFor(this));
-    p.fillRect(rect(), Qt::black);
-    if (!hasFrame()) { p.setPen(Qt::white); p.drawText(rect(), Qt::AlignCenter, QStringLiteral("Loading…")); }
+    QWidget::resizeEvent(event);
+    clampPan();
+}
+
+void VideoSurface::updateFrame()
+{
     if (m_dirty) {
         // toImage() applies the stream's rotation/mirroring metadata.
         m_image = m_frame.toImage();
@@ -137,9 +144,18 @@ void VideoSurface::paintEvent(QPaintEvent *)
         m_dirty = false;
         if (!m_image.isNull() && m_image.size() != m_size) {
             m_size = m_image.size();
+            clampPan();
             Q_EMIT frameSizeChanged(m_size);
         }
     }
+}
+
+void VideoSurface::paintEvent(QPaintEvent *)
+{
+    QPainter p(this);
+    p.setClipPath(Style::windowShapeFor(this));
+    p.fillRect(rect(), Qt::black);
+    if (!hasFrame()) { p.setPen(Qt::white); p.drawText(rect(), Qt::AlignCenter, QStringLiteral("Loading…")); }
     if (m_image.isNull()) {
         return;
     }
@@ -187,8 +203,10 @@ MediaView::MediaView(Settings *settings, QWidget *parent)
     });
     connect(m_surface, &VideoSurface::frameSizeChanged, this, [this](const QSize &size) {
         m_loadTimeout.stop();
-        m_videoSize = size;
-        Q_EMIT naturalSizeChanged(naturalSize());
+        if(m_videoSize!=size) {
+            m_videoSize = size;
+            Q_EMIT naturalSizeChanged(naturalSize());
+        }
         if (!m_ready && m_active) {
             m_ready = true;
             Q_EMIT ready();
@@ -334,6 +352,11 @@ SizeCategory MediaView::sizeCategory() const
 
 QSize MediaView::naturalSize() const
 {
+    return naturalSizeF().toSize();
+}
+
+QSizeF MediaView::naturalSizeF() const
+{
     if (!m_hasVideo) {
         return AudioWindowSize;
     }
@@ -341,7 +364,7 @@ QSize MediaView::naturalSize() const
         return QSize();
     }
     const qreal dpr = std::max<qreal>(1.0, devicePixelRatioF());
-    return (QSizeF(m_videoSize) / dpr).toSize();
+    return QSizeF(m_videoSize) / dpr;
 }
 
 void MediaView::load(const PreviewItem &item)
@@ -434,6 +457,10 @@ void MediaView::onMediaStatus(QMediaPlayer::MediaStatus status)
             m_loadTimeout.stop();
             updateMetaData();
             setHasVideo(m_player->hasVideo());
+            if(m_hasVideo && m_videoSize.isEmpty() && m_sink->videoSize().isValid()) {
+                m_videoSize=m_sink->videoSize();
+                Q_EMIT naturalSizeChanged(naturalSize());
+            }
             if (!m_hasVideo) {
                 if (!m_ready) {
                     m_ready = true;

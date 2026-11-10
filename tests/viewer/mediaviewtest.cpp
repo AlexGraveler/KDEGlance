@@ -49,6 +49,43 @@ private:
     }
 
 private Q_SLOTS:
+    void firstFrameGeometryDoesNotDependOnPainting()
+    {
+        VideoSurface surface;
+        surface.resize(640,480);
+        QSignalSpy sizes(&surface,&VideoSurface::frameSizeChanged);
+        QImage portrait(180,320,QImage::Format_RGB32); portrait.fill(Qt::red);
+        surface.setFrame(QVideoFrame(portrait));
+        QCOMPARE(surface.frameSize(),portrait.size());
+        QCOMPARE(sizes.size(),1);
+        QVERIFY(surface.hasFrame());
+        surface.rotateLeft();
+        QCOMPARE(surface.frameSize(),QSize(320,180));
+        QCOMPARE(sizes.size(),2);
+    }
+
+    void videoZoomUsesCursorAndDoesNotMoveAtLimit()
+    {
+        VideoSurface surface; surface.resize(640,480);
+        QImage frame(1280,720,QImage::Format_RGB32); frame.fill(Qt::blue);
+        surface.setFrame(QVideoFrame(frame));
+        surface.zoomAt(3,QPointF(320,240));
+        const QPointF cursor(237.25,181.5);
+        const auto before=surface.imageRect();
+        const QPointF unit((cursor.x()-before.x())/before.width(),(cursor.y()-before.y())/before.height());
+        surface.zoomAt(3.01,cursor);
+        const auto after=surface.imageRect();
+        QVERIFY((after.topLeft()+QPointF(unit.x()*after.width(),unit.y()*after.height())-cursor).manhattanLength()<1e-8);
+        surface.zoomAt(16,cursor);
+        const auto maximum=surface.imageRect();
+        surface.zoomAt(20,QPointF(30,30));
+        QCOMPARE(surface.imageRect(),maximum);
+        surface.zoomAt(0.1,cursor);
+        const auto minimum=surface.imageRect();
+        surface.zoomAt(0.01,QPointF(590,400));
+        QCOMPARE(surface.imageRect(),minimum);
+    }
+
     void initTestCase()
     {
         if (ffmpeg().isEmpty()) {

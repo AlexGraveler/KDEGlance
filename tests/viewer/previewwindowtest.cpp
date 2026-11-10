@@ -12,6 +12,7 @@
 #include "../testutils.h"
 
 #include <QSignalSpy>
+#include <QScreen>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QWheelEvent>
@@ -43,12 +44,186 @@ private:
     }
 
 private Q_SLOTS:
+    void coordinatedNavigationKeepsManagedGeometry_data()
+    {
+        QTest::addColumn<bool>("fullscreen");
+        QTest::newRow("fullscreen") << true;
+        QTest::newRow("maximized") << false;
+    }
+    void coordinatedNavigationKeepsManagedGeometry()
+    {
+        QFETCH(bool,fullscreen);
+        open(u"wide.png"_s);
+        m_window->setCoordinatedGeometry(true);
+        if(fullscreen) m_window->showFullScreen(); else m_window->showMaximized();
+        QApplication::processEvents();
+        const QSize managed=m_window->size();
+        m_window->showItem(ViewerApp::makeItem(QUrl::fromLocalFile(path(u"tall.png"_s))),false);
+        QVERIFY(waitFor([&]{return m_window->presentationReady();}));
+        QCOMPARE(m_window->size(),managed);
+        QVERIFY(m_window->geometryRequest().isEmpty());
+        QVERIFY(m_window->imageView()->isVisible());
+    }
+
+    void coalescedWheelWaitsForEachConfigure()
+    {
+        m_window->setCoordinatedGeometry(true);
+        m_window->showItem(ViewerApp::makeItem(QUrl::fromLocalFile(path(u"wide.png"_s))),true);
+        QVERIFY(waitFor([&]{return !m_window->geometryRequest().isEmpty();}));
+        m_window->geometryIssued(m_window->geometryRequest().value(u"id"_s).toString(),0,0);
+        QVERIFY(waitFor([&]{return m_window->presentationReady();}));
+        auto* view=m_window->imageView();
+        const auto original=m_window->size();
+        const qreal originalScale=view->zoomScale();
+        for(int i=0;i<10;++i) {
+            QWheelEvent wheel(QPointF(130,75),QPointF(130,75),{},QPoint(0,120),Qt::NoButton,Qt::NoModifier,Qt::ScrollUpdate,false);
+            QApplication::sendEvent(view,&wheel);
+        }
+        QCOMPARE(m_window->size(),original);
+        auto first=m_window->geometryRequest();
+        m_window->resize(first.value(u"width"_s).toInt(),first.value(u"height"_s).toInt());
+        m_window->geometryIssued(first.value(u"id"_s).toString(),-20,-10);
+        QVERIFY(waitFor([&]{return !m_window->geometryRequest().isEmpty();}));
+        const auto second=m_window->geometryRequest();
+        QVERIFY(first.value(u"id"_s)!=second.value(u"id"_s));
+        m_window->resize(second.value(u"width"_s).toInt(),second.value(u"height"_s).toInt());
+        m_window->geometryIssued(second.value(u"id"_s).toString(),0,0);
+        QVERIFY(qAbs(view->zoomScale()-view->boundedScale(originalScale*std::pow(2.,2.5)))<1e-8);
+        QVERIFY(m_window->geometryRequest().isEmpty());
+    }
+
+    void pausedVideoHasGeometryBeforeFirstPlaybackFrame()
+    {
+        m_settings->setAutoplay(false);
+        open(u"portrait.mkv"_s);
+        QVERIFY(waitFor([&]{return m_window->presentationReady();},5000));
+        const auto initial=m_window->size();
+        QVERIFY(m_window->mediaView()->naturalSizeF().isValid());
+        m_window->mediaView()->player()->play();
+        QVERIFY(waitFor([&]{return m_window->mediaView()->surface()->hasFrame();}));
+        QCOMPARE(m_window->size(),initial);
+    }
+
+    void coordinatedResizeNeverPaintsAnUncommittedZoom()
+    {
+        m_window->setCoordinatedGeometry(true);
+        m_window->showItem(ViewerApp::makeItem(QUrl::fromLocalFile(path(u"wide.png"_s))),true);
+        QVERIFY(waitFor([&]{return !m_window->geometryRequest().isEmpty();}));
+        QVERIFY(!m_window->imageView()->isVisible());
+        QVERIFY(!m_window->presentationReady());
+        auto request=m_window->geometryRequest();
+        m_window->geometryIssued(request.value(u"id"_s).toString(),0,0);
+        QVERIFY(waitFor([&]{return m_window->presentationReady();}));
+        auto* view=m_window->imageView();
+        const QSize before=m_window->size();
+        const qreal scale=view->zoomScale();
+        const QPointF p(133.25,77.5);
+        QWheelEvent wheel(p,view->mapToGlobal(p.toPoint()),{},QPoint(0,120),Qt::NoButton,Qt::NoModifier,Qt::ScrollUpdate,false);
+        QApplication::sendEvent(view,&wheel);
+        request=m_window->geometryRequest();
+        QVERIFY(!request.isEmpty());
+        QCOMPARE(m_window->size(),before);
+        QCOMPARE(view->zoomScale(),scale);
+        // Worst ordering: configure arrives before the D-Bus confirmation.
+        m_window->resize(request.value(u"width"_s).toInt(),request.value(u"height"_s).toInt());
+        QVERIFY(!m_window->updatesEnabled());
+        QApplication::processEvents();
+        QCOMPARE(view->zoomScale(),scale);
+        m_window->geometryIssued(request.value(u"id"_s).toString(),-20,-10);
+        QVERIFY(m_window->updatesEnabled());
+        QVERIFY(view->zoomScale()>scale);
+        QCOMPARE(view->size(),m_window->size());
+    }
+
+    void staleGeometryCannotExposeTheNextFile()
+    {
+        m_window->setCoordinatedGeometry(true);
+        m_window->showItem(ViewerApp::makeItem(QUrl::fromLocalFile(path(u"wide.png"_s))),true);
+        QVERIFY(waitFor([&]{return !m_window->geometryRequest().isEmpty();}));
+        const auto old=m_window->geometryRequest();
+        m_window->showItem(ViewerApp::makeItem(QUrl::fromLocalFile(path(u"tall.png"_s))),false);
+        QVERIFY(waitFor([&]{return !m_window->geometryRequest().isEmpty();}));
+        const auto current=m_window->geometryRequest();
+        QVERIFY(old.value(u"id"_s)!=current.value(u"id"_s));
+        m_window->geometryIssued(old.value(u"id"_s).toString(),0,0);
+        QVERIFY(!m_window->presentationReady());
+        QVERIFY(!m_window->imageView()->isVisible());
+        m_window->resize(current.value(u"width"_s).toInt(),current.value(u"height"_s).toInt());
+        m_window->geometryIssued(current.value(u"id"_s).toString(),0,0);
+        QVERIFY(waitFor([&]{return m_window->presentationReady();}));
+        m_window->closePreview();
+        m_window->geometryIssued(current.value(u"id"_s).toString(),0,0);
+        QVERIFY(!m_window->isVisible());
+    }
+
+    void initialFitMatchesContent_data()
+    {
+        QTest::addColumn<QString>("name");
+        QTest::newRow("landscape-image") << u"wide.png"_s;
+        QTest::newRow("portrait-image") << u"tall.png"_s;
+        QTest::newRow("landscape-video") << u"landscape.mkv"_s;
+        QTest::newRow("portrait-video") << u"portrait.mkv"_s;
+        QTest::newRow("square-image") << u"square.png"_s;
+        QTest::newRow("banner-image") << u"banner.png"_s;
+        QTest::newRow("banner-video") << u"banner.mkv"_s;
+    }
+    void initialFitMatchesContent()
+    {
+        QFETCH(QString,name);
+        m_settings->setSavedSize(SizeCategory::Image,QSize(600,400));
+        m_settings->setSavedSize(SizeCategory::Video,QSize(600,400));
+        open(name);
+        QRectF content;
+        QVERIFY(waitFor([&] {
+            if (name.endsWith(u".png"_s)) {
+                if (!m_window->imageView()->hasImage()) return false;
+                content=m_window->imageView()->displayRect();
+            } else {
+                if (!m_window->mediaView()->surface()->hasFrame()) return false;
+                content=m_window->mediaView()->surface()->imageRect();
+            }
+            return std::abs(content.width()-m_window->width())<1.1 && std::abs(content.height()-m_window->height())<1.1;
+        }));
+        QCOMPARE(m_window->currentView()->size(),m_window->size());
+        QVERIFY(std::abs(content.x())<1 && std::abs(content.y())<1);
+    }
+
+    void wheelKeepsGlobalCursorWhileWindowResizes()
+    {
+        open(u"wide.png"_s);
+        auto* view=m_window->imageView();
+        QVERIFY(waitFor([&]{return view->hasImage();}));
+        const QPointF local(133.25,77.5);
+        const QPointF global=QPointF(view->mapToGlobal(QPoint()))+local;
+        const QPointF imagePoint=(local-view->zoomOffset())/view->zoomScale();
+        QWheelEvent wheel(local,global,{},QPoint(0,120),Qt::NoButton,Qt::NoModifier,Qt::ScrollUpdate,false);
+        QApplication::sendEvent(view,&wheel);
+        const auto request=m_window->photoZoomPlacement();
+        QVERIFY(!request.isEmpty());
+        const QPointF after=request.topLeft()+view->zoomOffset()+imagePoint*view->zoomScale();
+        QVERIFY((after-global).manhattanLength()<1e-8);
+        QVERIFY(!m_settings->savedSize(SizeCategory::Image));
+    }
+
     void initTestCase()
     {
-        QVERIFY(twoColorImage(8, 4).save(path(u"tiny.png"_s)));
-        QVERIFY(twoColorImage(400, 200).save(path(u"wide.png"_s)));
-        QVERIFY(twoColorImage(3000, 1000).save(path(u"huge.png"_s)));
-        QVERIFY(twoColorImage(300, 600).save(path(u"tall.png"_s)));
+        // These tests specify logical viewport dimensions. Supply matching
+        // physical pixels so the same assertions also exercise fractional DPR.
+        const qreal dpr = QGuiApplication::primaryScreen()->devicePixelRatio();
+        const auto image = [dpr](int width, int height) {
+            return twoColorImage(qRound(width*dpr), qRound(height*dpr));
+        };
+        QVERIFY(image(8, 4).save(path(u"tiny.png"_s)));
+        QVERIFY(image(400, 200).save(path(u"wide.png"_s)));
+        QVERIFY(image(3000, 1000).save(path(u"huge.png"_s)));
+        QVERIFY(image(300, 600).save(path(u"tall.png"_s)));
+        QVERIFY(image(600,600).save(path(u"square.png"_s)));
+        QVERIFY(image(1600,80).save(path(u"banner.png"_s)));
+        for (const auto &name : {u"landscape"_s,u"portrait"_s,u"banner"_s}) {
+            const auto dimensions=name==u"landscape"_s ? u"320x180"_s : name==u"portrait"_s ? u"180x320"_s : u"1280x64"_s;
+            QVERIFY(run(ffmpeg(),{u"-v"_s,u"error"_s,u"-y"_s,u"-f"_s,u"lavfi"_s,u"-i"_s,
+                u"testsrc2=size="_s+dimensions+u":rate=5"_s,u"-t"_s,u"2"_s,u"-c:v"_s,u"mpeg4"_s,path(name+u".mkv"_s)}));
+        }
         QFile txt(path(u"notes.txt"_s));
         QVERIFY(txt.open(QIODevice::WriteOnly));
         txt.write("hello");
@@ -104,7 +279,7 @@ private Q_SLOTS:
         m_window->setWorkArea(QRect(0,0,1600,1000));
         open(u"tall.png"_s);
         QVERIFY(waitFor([&] { return m_window->imageView()->hasImage(); }));
-        QCOMPARE(m_window->size(), QSize(600,400));
+        QCOMPARE(m_window->size(), QSize(200,400));
         QVERIFY(m_window->imageView()->isFitMode());
         QVERIFY(qAbs(m_window->imageView()->zoomScale()-2.0/3)<0.001);
         m_window->setWorkArea(QRect(0,0,500,300));
@@ -133,8 +308,8 @@ private Q_SLOTS:
         m_window->beginInteractiveResize(Qt::RightEdge|Qt::BottomEdge,false); m_window->resize(600,600); m_window->endInteractiveResize();
         wheel(-120); QVERIFY(m_window->size()!=QSize(600,600));
         QCOMPARE(m_settings->savedSize(SizeCategory::Image),std::optional<QSize>(QSize(600,600)));
-        m_window->closePreview(); open(u"wide.png"_s); QCOMPARE(m_window->size(),QSize(600,600));
-        QVERIFY(view->isFitMode()); QCOMPARE(view->displayRect(),QRectF(0,150,600,300));
+        m_window->closePreview(); open(u"wide.png"_s); QCOMPARE(m_window->size(),QSize(600,300));
+        QVERIFY(view->isFitMode()); QCOMPARE(view->displayRect(),QRectF(0,0,600,300));
     }
     void wheelContinuesPastScreenAndPreservesCursor()
     {
@@ -215,7 +390,7 @@ private Q_SLOTS:
         QCOMPARE(m_settings->savedSize(SizeCategory::Image),std::optional<QSize>(QSize(900,600)));
         m_window->setPhotoCompositorManaged(false);
         m_window->closePreview();open(u"wide.png"_s);
-        QCOMPARE(m_window->size(),QSize(900,600));
+        QCOMPARE(m_window->size(),QSize(900,450));
     }
     void reopenMaximizedPhotoRestoresManualGeometry()
     {
@@ -225,7 +400,7 @@ private Q_SLOTS:
         m_window->showMaximized();
         m_window->setPhotoCompositorManaged(true);
         m_window->closePreview();open(u"wide.png"_s);
-        QVERIFY(!m_window->isMaximized());QCOMPARE(m_window->size(),QSize(900,600));
+        QVERIFY(!m_window->isMaximized());QCOMPARE(m_window->size(),QSize(900,450));
         QVERIFY(m_window->imageView()->isFitMode());
     }
     void zoomOutOfCropKeepsWindowUntilImageFits()
@@ -280,7 +455,7 @@ private Q_SLOTS:
         open(u"wide.png"_s); m_window->beginInteractiveResize(Qt::RightEdge|Qt::BottomEdge,false);
         m_window->resize(90,70); m_window->endInteractiveResize();
         QVERIFY(m_settings->save()); m_settings->load(); m_window->closePreview(); open(u"wide.png"_s);
-        QCOMPARE(m_window->size(),QSize(90,70));
+        QCOMPARE(m_window->size(),QSize(90,45));
     }
 
     void spaceAndEscapeClose()
@@ -334,7 +509,10 @@ private Q_SLOTS:
         QVERIFY(m_window->size()!=QSize(777,555));
         open(u"tall.png"_s,false);
         QVERIFY(waitFor([&]{return m_window->imageView()->hasImage();}));
-        QCOMPARE(m_window->size(),QSize(777,555));
+        QCOMPARE(m_window->size(),QSize(278,555));
+        const auto content=m_window->imageView()->displayRect();
+        QVERIFY(std::abs(content.x())<1 && std::abs(content.y())<1);
+        QCOMPARE(m_settings->savedSize(SizeCategory::Image),std::optional<QSize>(QSize(777,555)));
     }
     void legacyPersistentZoomIsIgnored()
     {
@@ -346,7 +524,7 @@ private Q_SLOTS:
         QVERIFY(!m_settings->toJson().value(u"image"_s).toObject().contains(u"zoom"_s));
         m_window=std::make_unique<PreviewWindow>(m_settings.get()); m_window->setWorkArea(QRect(0,0,1600,1000));
         open(u"wide.png"_s); QVERIFY(waitFor([&]{return m_window->imageView()->hasImage();}));
-        QCOMPARE(m_window->size(),QSize(600,400)); QCOMPARE(m_window->imageView()->zoomScale(),1.5);
+        QCOMPARE(m_window->size(),QSize(600,300)); QCOMPARE(m_window->imageView()->zoomScale(),1.5);
     }
     void imageZoomDoesNotResizeOrSaveWindow()
     {
@@ -405,10 +583,10 @@ private Q_SLOTS:
         QCOMPARE(m_settings->savedSize(SizeCategory::Image), std::optional<QSize>(QSize(777, 555)));
         QVERIFY(!m_settings->savedSize(SizeCategory::Video));
         QVERIFY(!m_settings->savedSize(SizeCategory::Audio));
-        // Restore user geometry independently of the next image aspect ratio.
+        // Restore the saved bounds, then fit the next image's aspect ratio.
         m_window->closePreview();
         open(u"tall.png"_s);
-        QCOMPARE(m_window->size(), QSize(777, 555));
+        QCOMPARE(m_window->size(), QSize(278, 555));
     }
 
     void programmaticSizesAreNotSaved()

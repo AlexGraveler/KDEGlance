@@ -11,3 +11,5 @@
 /packaging/arch/*.pkg.tar.*
 __pycache__/
 *.moc
+/packaging/fedora/rpmbuild/
+/.release-work/

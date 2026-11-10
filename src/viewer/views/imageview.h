@@ -9,6 +9,7 @@
 #include <QElapsedTimer>
 #include <QImage>
 #include <QTimer>
+#include <algorithm>
 
 namespace KDEGlance
 {
@@ -28,6 +29,7 @@ class ImageLoader;
 class ImageView : public ContentView
 {
     Q_OBJECT
+    Q_PROPERTY(QRectF displayRect READ displayRect)
 public:
     explicit ImageView(QWidget *parent = nullptr);
     ~ImageView() override;
@@ -39,10 +41,15 @@ public:
         return SizeCategory::Image;
     }
     QSize naturalSize() const override;
+    QSizeF naturalSizeF() const override { return rotatedUnits(); }
     bool handleKey(QKeyEvent *event) override;
     void prefetch(const QList<PreviewItem> &items) override;
 
     void setWheelResizesWindow(bool enabled) { m_wheelResizesWindow = enabled; }
+    void setCoordinatedZoom(bool enabled) { m_coordinatedZoom = enabled; }
+    void holdGeometryZoom(bool pending) { m_geometryZoomPending = pending; }
+    void commitGeometryZoom(const Geometry::ZoomState &state) { m_geometryZoomPending=false; setZoom(state,false); }
+    qreal boundedScale(qreal scale) const { return std::clamp(scale,minScale(),maxScale()); }
     void setFitUpscale(bool enabled) { m_fitUpscale = enabled; }
     void prepareWindowResize();
     void resetPresentation() override;
@@ -75,9 +82,13 @@ public:
     void setPage(int page);
 
 Q_SIGNALS:
+    void coordinatedZoomRequested(qreal factor, const QPointF &anchor, bool physical);
     void wheelDisplaySizeRequested(const QSizeF &size);
+    void wheelWindowPositionRequested(const QPointF &topLeft, qreal ratio, const QPointF &translation,
+                                      const QPointF &anchor, bool physical);
 
 protected:
+    bool event(QEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
@@ -140,6 +151,8 @@ private:
     bool m_fitUpscale = false;
     bool m_wheelResizesWindow = false;
     bool m_wheelTransaction = false;
+    bool m_coordinatedZoom = false;
+    bool m_geometryZoomPending = false;
     int m_rotation = 0; // degrees clockwise: 0, 90, 180, 270
     bool m_mirror = false;
 

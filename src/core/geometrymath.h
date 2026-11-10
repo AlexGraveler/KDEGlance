@@ -20,7 +20,7 @@ inline constexpr QSize MinimumWindowSize{280, 200};
  * is shown at 100% when it fits into fraction * workArea, otherwise it is
  * scaled down keeping its aspect ratio. Never smaller than minimum.
  */
-QSize autoWindowSize(const QSize &contentSize, const QSize &workArea, double fraction, const QSize &minimum = MinimumWindowSize);
+QSize autoWindowSize(const QSizeF &contentSize, const QSize &workArea, double fraction, const QSize &minimum = MinimumWindowSize);
 
 // Shrinks size to fit into the work area (never grows it).
 QSize clampToArea(const QSize &size, const QSize &workArea, const QSize &minimum = MinimumWindowSize);

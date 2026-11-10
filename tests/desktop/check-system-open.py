@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Actual user MIME associations, real Wayland application windows, synthetic keys.
 import json,os,pathlib,shutil,subprocess,time
+QDBUS = shutil.which("qdbus6") or shutil.which("qdbus-qt6")
+if not QDBUS: raise SystemExit("Install Qt 6 D-Bus tools (Fedora: qt6-qttools)")
 root=pathlib.Path(__file__).resolve().parents[2];out=pathlib.Path(os.environ.get('KDEGLANCE_TEST_OUTPUT',str(root/'build/desktop/system-open')));out.mkdir(parents=True,exist_ok=True)
 report=[]
 def call(s,p,m,*args):
- r=subprocess.run(['qdbus6',s,p,m,*map(str,args)],capture_output=True,text=True,timeout=15)
+ r=subprocess.run([QDBUS,s,p,m,*map(str,args)],capture_output=True,text=True,timeout=15)
  if r.returncode:raise RuntimeError(f'{s} {m}: {r.returncode} {r.stdout!r} {r.stderr!r}')
  return r.stdout.strip()
 def v(m,*args):return call('org.kde.kdeglance','/Viewer',m,*args)
@@ -44,7 +46,7 @@ try:
   check('No existing '+app+' process',subprocess.run(['pgrep','-x',app],capture_output=True).returncode!=0)
  v('Quit');stopped=True;time.sleep(.5)
  viewer=subprocess.Popen([os.environ.get('KDEGLANCE_TEST_BINARY',str(root/'build/src/kdeglance')),'--service'],env=env,stdout=log,stderr=log)
- check('Test source service registered',wait(lambda:subprocess.run(['qdbus6','org.kde.kdeglance.Test.p'+str(viewer.pid),'/KDEGlanceTest','State'],capture_output=True).returncode==0))
+ check('Test source service registered',wait(lambda:subprocess.run([QDBUS,'org.kde.kdeglance.Test.p'+str(viewer.pid),'/KDEGlanceTest','State'],capture_output=True).returncode==0))
  image=out/'KDEGlanceEnterImage-20261028.png';shutil.copy2(root/'build/desktop/candidate-samples/sample.png',image)
  text=out/'KDEGlanceEnterText-20261028.txt';shutil.copy2(root/'build/desktop/candidate-samples/unicode.txt',text)
  smb=os.environ.get('KDEGLANCE_TEST_SMB_URL')
