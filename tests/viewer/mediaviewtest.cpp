@@ -49,6 +49,42 @@ private:
     }
 
 private Q_SLOTS:
+    void decoderErrorDefersSourceCleanup()
+    {
+        Settings settings(path(u"decoder-error-settings.json"_s));
+        settings.setAutoplay(false);
+        MediaView view(&settings);
+        const QUrl source = QUrl::fromLocalFile(path(u"clip.mkv"_s));
+        view.load(ViewerApp::makeItem(source));
+        QSignalSpy failed(&view, &ContentView::failed);
+        view.player()->errorOccurred(QMediaPlayer::FormatError, u"decoder initialization failed"_s);
+        // A direct backend signal must return without destroying its source
+        // or synchronously notifying the host (which also unloads the view).
+        QCOMPARE(view.player()->source(), source);
+        QVERIFY(failed.isEmpty());
+        QVERIFY(waitFor([&] { return failed.size() == 1; }));
+        QVERIFY(view.player()->source().isEmpty());
+    }
+
+    void decoderErrorCannotUnloadNextFile()
+    {
+        Settings settings(path(u"stale-decoder-error-settings.json"_s));
+        settings.setAutoplay(false);
+        MediaView view(&settings);
+        view.load(ViewerApp::makeItem(QUrl::fromLocalFile(path(u"clip.mkv"_s))));
+        QSignalSpy failed(&view, &ContentView::failed);
+        view.player()->errorOccurred(QMediaPlayer::FormatError, u"old decoder failed"_s);
+        const QUrl next = QUrl::fromLocalFile(path(u"plain.wav"_s));
+        view.load(ViewerApp::makeItem(next));
+        QApplication::processEvents();
+        QCOMPARE(view.player()->source(), next);
+        QVERIFY(failed.isEmpty());
+        view.player()->errorOccurred(QMediaPlayer::ResourceError, u"closed load failed"_s);
+        view.unload();
+        QApplication::processEvents();
+        QVERIFY(failed.isEmpty());
+    }
+
     void firstFrameGeometryDoesNotDependOnPainting()
     {
         VideoSurface surface;

@@ -15,7 +15,7 @@ sudo dnf install rpm-build rpmdevtools dnf5-plugins
 sudo dnf builddep packaging/fedora/kdeglance.spec
 python3 packaging/fedora/make-source-tarball.py
 rpmbuild -ba --define "_topdir $PWD/packaging/fedora/rpmbuild" packaging/fedora/kdeglance.spec
-sudo dnf install ./packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.0.3-1.fc44.*.rpm
+sudo dnf install ./packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.0.4-1.fc44.*.rpm
 ```
 
 The archive includes current source edits without modifying the Arch recipe or
@@ -38,7 +38,7 @@ MIME associations or SELinux policy to install KDEGlance.
 ## Verification
 
 ```bash
-rpm -qp --requires packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.0.3-1.fc44.*.rpm
+rpm -qp --requires packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.0.4-1.fc44.*.rpm
 rpm -ql kdeglance
 rpm -V kdeglance
 kdeglance --version

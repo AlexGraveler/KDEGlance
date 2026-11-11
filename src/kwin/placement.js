@@ -114,13 +114,22 @@ const states = {};
 // the client paints the corresponding zoom only when configure is delivered.
 function waitForGeometry(w,st) {
     if(st.geometryWaiting || w.deleted || (w.caption && !w.caption.endsWith(" — KDEGlance"))) return;
+    const caption=w.caption || "";
+    const captionGeneration=st.captionGeneration;
     st.geometryWaiting=true;
-    callDBus(SERVICE,PATH,IFACE,"WaitForGeometry",w.internalId.toString(),w.caption || "",function(reply) {
+    callDBus(SERVICE,PATH,IFACE,"WaitForGeometry",w.internalId.toString(),caption,function(reply) {
         st.geometryWaiting=false;
         if(w.deleted || !states[w.internalId.toString()]) return;
         let p;
         try {p=JSON.parse(reply);} catch(e) {return;}
-        if(p.ignored) return;
+        if(p.ignored) {
+            // captionChanged may have arrived while this old-caption call
+            // was in flight and therefore could not start a new wait. Resume
+            // for the current caption; if it has not arrived yet, its signal
+            // will restart us. Never retry the same rejected caption in a loop.
+            if(st.captionGeneration!==captionGeneration) waitForGeometry(w,st);
+            return;
+        }
         if(p.id) {
             if(p.kind==="zoom" && (st.interactive || w.move || w.resize || w.fullScreen || w.maximizeMode || w.tile)) {
                 callDBus(SERVICE,PATH,IFACE,"GeometryRejected",p.id);
@@ -165,6 +174,7 @@ function track(w) {
         interactive: false,
         previous: previous && !isOurs(previous) ? previous : null,
         focusLeft: false,
+        captionGeneration: 0,
     };
     states[id] = st;
 
@@ -183,6 +193,7 @@ function track(w) {
     refreshMode(w, st, reportPhotoState);
     waitForGeometry(w,st);
     if(w.captionChanged) w.captionChanged.connect(function(){
+        ++st.captionGeneration;
         st.visualTransaction=false;
         waitForGeometry(w,st);
         st.zoomQuery=(st.zoomQuery || 0)+1;

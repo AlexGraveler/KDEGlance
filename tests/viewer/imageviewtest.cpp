@@ -89,6 +89,9 @@ private Q_SLOTS:
         QByteArray tga(18, '\0');
         tga[2] = 2; tga[12] = 2; tga[14] = 1; tga[16] = 24; tga[17] = 32;
         tga += QByteArray::fromHex("0000ff00ff00"); // red, green in BGR order
+        // Qt's TGA plugin probes the 26-byte TGA 2.0 footer. Include it so
+        // this two-pixel fixture also works with that decoder (24 < 26).
+        tga += QByteArray(8, '\0') + QByteArray("TRUEVISION-XFILE.\0", 18);
         QFile file(path(u"tiny.tga"_s));
         QVERIFY(file.open(QIODevice::WriteOnly));
         QCOMPARE(file.write(tga), tga.size());

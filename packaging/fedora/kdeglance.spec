@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 Name:           kdeglance
-Version:        2.0.3
+Version:        2.0.4
 Release:        1%{?dist}
 Summary:        Quick Look style file previews for Dolphin
 License:        GPL-3.0-or-later
@@ -22,6 +22,8 @@ BuildRequires:  pkgconfig(Qt6Multimedia)
 BuildRequires:  pkgconfig(Qt6Core5Compat)
 BuildRequires:  pkgconfig(Qt6Svg)
 BuildRequires:  pkgconfig(Qt6Test)
+BuildRequires:  qt6-qtimageformats
+BuildRequires:  kf6-kimageformats
 BuildRequires:  pkgconfig(poppler-qt6)
 BuildRequires:  pkgconfig(libraw_r)
 BuildRequires:  cmake(KF6KIO)
@@ -101,9 +103,9 @@ QT_QPA_PLATFORM=offscreen %ctest --output-on-failure --timeout 900
 %{_datadir}/kdeglance/
 
 %changelog
-* Tue Nov 10 2026 KDEGlance contributors - 2.0.3-1
-- Unify Fedora 44 and Arch/CachyOS geometry and cursor zoom fixes
-- Preserve optional LibreOffice runtime and Fedora plugin paths
+* Wed Nov 11 2026 KDEGlance contributors - 2.0.4-1
+- Renew KWin geometry waits after image navigation
+- Defer decoder error cleanup until the backend returns
 
 * Tue Nov 10 2026 KDEGlance contributors - 2.0.2-3
 - Commit cursor zoom and initial media geometry with KWin configure

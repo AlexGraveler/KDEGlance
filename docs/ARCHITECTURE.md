@@ -1,4 +1,4 @@
-# KDEGlance 2.0.3 architecture
+# KDEGlance 2.0.4 architecture
 
 The application is C++20/Qt6/KF6. The resident viewer, Dolphin plugins, settings
 schema and D-Bus identities are preserved from the accepted local implementation.

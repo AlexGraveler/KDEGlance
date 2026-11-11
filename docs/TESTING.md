@@ -1,4 +1,4 @@
-# Testing KDEGlance 2.0.3
+# Testing KDEGlance 2.0.4
 
 ## Build and mandatory checks
 

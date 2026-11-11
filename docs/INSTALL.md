@@ -1,4 +1,4 @@
-# Install, update and remove KDEGlance 2.0.3
+# Install, update and remove KDEGlance 2.0.4
 
 ## Binary package
 
@@ -150,4 +150,4 @@ an isolated temporary Pacman root without removing the running desktop package.
 ## Fedora 44
 
 See [the Fedora recipe and installation instructions](../packaging/fedora/README.md)
-and [current binary availability](../packaging/fedora/RELEASE-2.0.3.md).
+and [current binary availability](../RELEASE-NOTES.md).

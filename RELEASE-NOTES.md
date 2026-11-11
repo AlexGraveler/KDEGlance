@@ -1,3 +1,46 @@
+# KDEGlance 2.0.4
+
+Maintenance release with fixes validated on Fedora; no new features.
+
+- **Image zoom / KWin:** renew stale geometry waits after image navigation so
+  wheel zoom continues working when the preview title changes.
+- **Video crash prevention:** defer decoder-error cleanup until the Qt Multimedia
+  callback returns, preventing the playback engine from being destroyed on its own
+  stack. Ignore stale errors after navigation or closing. Normal video playback
+  remains enabled.
+- Include regression tests for both lifecycle fixes.
+
+## Downloads
+
+Use the existing, separately built x86_64 RPM for your Fedora version:
+
+- Fedora 44: `kdeglance-2.0.4-1.fc44.x86_64.rpm`
+- Fedora 45: `kdeglance-2.0.4-1.fc45.x86_64.rpm`
+
+The RPMs are unchanged from the tested builds and are unsigned. Verify their
+SHA-256 checksums with the accompanying `SHA256SUMS` before installation.
+See [Fedora package verification](packaging/fedora/RELEASE-2.0.4.md) for hashes
+and source provenance.
+
+**Arch/CachyOS:** this update includes fixes validated on Fedora. The previously
+published **2.0.3 Arch package remains unchanged**, as does its build configuration.
+No new Arch package is supplied with 2.0.4.
+
+## Validation
+
+The release owner completed manual acceptance, including image scaling and video
+playback. Existing build results: Fedora 45 CTest **16/16**; Fedora 44 **15/16**,
+with a known RLE TGA format-test failure. The Fedora 44 RPM was packaged with
+`--nocheck` after that recorded test run; it is not presented as passing all tests.
+The video error path was tested against the old crashing binary and the fixed
+binary with a controlled decoder initialization failure. Fedora 45 container and
+offscreen checks do not certify a full Fedora 45 KDE Wayland/Live session.
+
+The tagged application code, data, build metadata and tests match the source
+archive embedded in both Fedora SRPMs. Release documentation was finalized after
+those builds; embedded RPM documentation still describes the unpublished candidate.
+No RPM rebuild was needed. Previous releases and their attachments are preserved.
+
 # KDEGlance 2.0.2
 
 ## Bug fix: slow PDF wheel scrolling
@@ -21,43 +64,3 @@ current system libraries**. For baseline x86_64 or an older compatible Qt versio
 build from source in an appropriate Arch environment.
 
 Existing v2.0.1 and v2.0.0 tags, releases and assets are preserved unchanged.
-
-## Validation and downloads
-
-Both full CTest runs passed **16/16**. The focused wheel test passed all 18 data
-scenarios; six selected scenarios also passed in native Wayland widgets using
-synthetic Qt input. No physical mouse/Dolphin acceptance is claimed.
-See VALIDATION.md for the exact checks and limits; verify files with SHA256SUMS.
-
-The host-built binary package is **2.0.2-1** and requires **x86-64-v3 and
-Qt >= 6.12.0**, plus compatible current system libraries. Build from source in
-a suitable standard Arch environment for other supported CPU/Qt combinations.
-
-This is a new release. Existing 2.0.1 and 2.0.0 releases/tags/assets are unchanged.
-
-
-## Fedora 44
-
-KDEGlance 2.0.3 adds Fedora 44 packaging to the shared Arch/CachyOS codebase,
-including the common Wayland image/video geometry and Zoom to Cursor fixes.
-The existing screenshots and Arch/CachyOS instructions above are preserved.
-The version numbers and validation counts above describe v2.0.2; the current
-2.0.3 source/Arch assets and checks are listed in SHA256SUMS and VALIDATION.md.
-
-A Fedora 44 RPM/SRPM 2.0.3 has not been built in this CachyOS environment and
-is not supplied as a tested binary. Build it on Fedora 44 from the v2.0.3
-repository using the included recipe:
-
-```bash
-sudo dnf install rpm-build rpmdevtools dnf5-plugins
-sudo dnf builddep packaging/fedora/kdeglance.spec
-python3 packaging/fedora/make-source-tarball.py
-rpmbuild -ba --define "_topdir $PWD/packaging/fedora/rpmbuild" packaging/fedora/kdeglance.spec
-sudo dnf install ./packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.0.3-1.fc44.*.rpm
-```
-
-LibreOffice remains optional at runtime; install `libreoffice-writer` separately
-for Office previews. Reopen Dolphin after installation. No global shortcuts,
-MIME defaults, SELinux policy or KWin settings need changing. The original
-Fedora 2.0.2-3.fc44 RPM is retained only as a previous-version reference, not
-renamed or presented as 2.0.3.

@@ -17,6 +17,7 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QWheelEvent>
+#include <QtTest/qtestwheel.h>
 
 using namespace KDEGlance;
 using namespace KDEGlanceTest;
@@ -35,6 +36,75 @@ private:
     }
 
 private Q_SLOTS:
+    void wheelZoomSurvivesImageNavigation_data()
+    {
+        QTest::addColumn<bool>("scrollSequence");
+        QTest::newRow("wheel") << false;
+        QTest::newRow("scroll-sequence") << true;
+    }
+    void wheelZoomSurvivesImageNavigation()
+    {
+        QFETCH(bool, scrollSequence);
+        QTemporaryDir sequenceDir;
+        QVERIFY(sequenceDir.isValid());
+        QStringList urls;
+        for (int i = 0; i < 10; ++i) {
+            const QString file = sequenceDir.filePath(u"sequence-%1.png"_s.arg(i));
+            QVERIFY(twoColorImage(640, 400).save(file));
+            urls << QUrl::fromLocalFile(file).toString();
+        }
+        ViewerApp app;
+        app.settings()->resetModule(SizeCategory::Image);
+        app.Open(urls, 0, {});
+        auto *window = app.window();
+        auto *view = window->imageView();
+        bool began = false;
+        for (int step = 0; step < 19; ++step) {
+            if (step) {
+                QTest::keyClick(window, step < 10 ? Qt::Key_Right : Qt::Key_Left);
+            }
+            QVERIFY(waitFor([&] { return window->presentationReady(); }));
+            QCOMPARE(app.CurrentUrl(), urls.at(step < 10 ? step : 18 - step));
+            // Finish neighbour decoding so navigation exercises synchronous
+            // cache hits as well as asynchronous loads after cache eviction.
+            for (int pass = 0; pass < 3; ++pass) {
+                view->loader()->waitForIdle();
+                QApplication::processEvents();
+            }
+            const qreal scale = view->zoomScale();
+            const QPointF anchor(window->width() * 0.4, window->height() * 0.4);
+            const QPointF imagePoint = (anchor - view->zoomOffset()) / scale;
+            const QPointF globalAnchor = QPointF(view->mapToGlobal(QPoint())) + anchor;
+            // Deliver through QWindow, including QWidget hit testing and
+            // scroll target selection, just like a platform wheel event.
+            QTest::wheelEvent(window->windowHandle(), anchor, QPoint(0, 120), {}, Qt::NoModifier,
+                             scrollSequence ? (began ? Qt::ScrollUpdate : Qt::ScrollBegin) : Qt::NoScrollPhase);
+            began = true;
+            QVERIFY2(view->zoomScale() > scale, qPrintable(u"zoom failed at step %1"_s.arg(step)));
+            const QPointF mapped = QPointF(view->mapToGlobal(QPoint())) + view->zoomOffset() + imagePoint * view->zoomScale();
+            QVERIFY2((mapped - globalAnchor).manhattanLength() < 2.0, "zoom must retain the global cursor anchor");
+            QTest::wheelEvent(window->windowHandle(), anchor, QPoint(0, -120), {}, Qt::NoModifier,
+                             scrollSequence ? Qt::ScrollUpdate : Qt::NoScrollPhase);
+            QVERIFY(qAbs(view->zoomScale() - scale) < 1e-8);
+
+            // Grow past the viewport, then verify dragging and the existing
+            // module reset gesture on every image in both directions.
+            QTest::wheelEvent(window->windowHandle(), anchor, QPoint(0, 1920), {}, Qt::NoModifier,
+                             scrollSequence ? Qt::ScrollUpdate : Qt::NoScrollPhase);
+            const QPoint center = view->rect().center();
+            const QPointF offset = view->zoomOffset();
+            QTest::mousePress(view, Qt::LeftButton, {}, center);
+            QTest::mouseMove(view, center - QPoint(20, 15));
+            QTest::mouseRelease(view, Qt::LeftButton, {}, center - QPoint(20, 15));
+            QCOMPARE(view->zoomOffset(), offset - QPointF(20, 15));
+            QTest::mouseClick(view, Qt::MiddleButton, {}, center);
+            QTest::mouseClick(view, Qt::MiddleButton, {}, center);
+            QVERIFY(view->isFitMode());
+            QCOMPARE(view->zoomScale(), 1.0);
+        }
+        app.Close();
+    }
+
     void initTestCase()
     {
         qputenv("XDG_CONFIG_HOME", m_dir.filePath(u"config"_s).toUtf8());

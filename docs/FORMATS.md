@@ -1,4 +1,4 @@
-# KDEGlance 2.0.3 format support
+# KDEGlance 2.0.4 format support
 
 Source of truth: `src/core/filetype.cpp`, `src/viewer/formatregistry.cpp`, the
 installed Qt plugins, LibRaw, FFmpeg, Poppler and LibreOffice. File-type detection

@@ -42,6 +42,7 @@ class Window {
         this.skipPager = false;
         this.skipSwitcher = false;
         this.output = env.workspace.activeScreen;
+        this.caption = env.caption;
         this.captionChanged = signal();
         this.frameGeometryChanged = signal();
         this.interactiveMoveResizeStarted = signal();
@@ -159,6 +160,76 @@ test("coordinated geometry is issued once before any client resize", () => {
     assert.strictEqual(reply.length,1);
     assert.strictEqual(JSON.parse(reply[0][4]).id,"1");
     assert.strictEqual(env.geometryReplies.length,1);
+});
+
+test("navigation restarts geometry wait when a stale-caption reply arrives after captionChanged", () => {
+    const env=makeEnv();env.view="image";env.geometryRequests=true;env.geometryReplies=[];load(env,script);
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    // The application has changed its title already, but KWin still sends
+    // the old caption. The D-Bus rejection is in flight when captionChanged
+    // arrives, so that signal sees an outstanding wait and cannot start one.
+    w.caption="second.png — KDEGlance";
+    w.captionChanged();
+    assert.strictEqual(env.geometryReplies.length,1);
+    env.geometryReplies.shift()(JSON.stringify({ignored:true}));
+    assert.strictEqual(env.geometryReplies.length,1,"the current caption must have an active geometry wait");
+    env.geometryReplies.shift()(JSON.stringify({id:"next",kind:"zoom",width:480,height:240,ratio:1.2,tx:0,ty:0,ax:100,ay:50,physical:false}));
+    assert(env.calls.some(c=>c[3]==="GeometryIssued" && JSON.parse(c[4]).id==="next"));
+});
+
+test("image navigation keeps geometry waits alive in both D-Bus reply orderings", () => {
+    const env=makeEnv();env.view="image";env.caption="0.png — KDEGlance";
+    env.geometryRequests=true;env.geometryReplies=[];load(env,script);
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    for(let step=0;step<19;++step) {
+        const index=step<10?step:18-step;
+        if(step) {
+            if(step%2===0) {
+                // Rejection before KWin receives the new caption: wait for
+                // captionChanged without repeatedly sending the old title.
+                env.geometryReplies.shift()(JSON.stringify({ignored:true}));
+                assert.strictEqual(env.geometryReplies.length,0);
+            }
+            w.caption=index+".png — KDEGlance";
+            w.captionChanged();
+            if(step%2!==0) env.geometryReplies.shift()(JSON.stringify({ignored:true}));
+        }
+        assert.strictEqual(env.geometryReplies.length,1);
+        const initialId="initial-"+step;
+        env.geometryReplies.shift()(JSON.stringify({id:initialId,kind:"initial",visual:true,width:400,height:200}));
+        for(const [direction,ratio] of [["in",1.2],["out",1/1.2]]) {
+            const id=direction+"-"+step;
+            env.geometryReplies.shift()(JSON.stringify({id,kind:"zoom",width:direction==="in"?480:400,
+                height:direction==="in"?240:200,ratio,tx:0,ty:0,ax:100,ay:50,physical:false}));
+            assert(env.calls.some(c=>c[3]==="GeometryIssued" && JSON.parse(c[4]).id===id));
+        }
+        assert.strictEqual(env.geometryReplies.length,1);
+    }
+});
+
+test("a rejected unchanged caption waits for a title signal and a closed window never restarts", () => {
+    const env=makeEnv();env.view="image";env.caption="first.png — KDEGlance";
+    env.geometryRequests=true;env.geometryReplies=[];load(env,script);
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    env.geometryReplies.shift()(JSON.stringify({ignored:true}));
+    assert.strictEqual(env.geometryReplies.length,0);
+    w.caption="second.png — KDEGlance";w.captionChanged();
+    assert.strictEqual(env.geometryReplies.length,1);
+    w.close();
+    env.geometryReplies.shift()(JSON.stringify({ignored:true}));
+    assert.strictEqual(env.geometryReplies.length,0);
+});
+
+test("rapid navigation back to the original caption still renews a rejected wait", () => {
+    const env=makeEnv();env.view="image";env.caption="first.png — KDEGlance";
+    env.geometryRequests=true;env.geometryReplies=[];load(env,script);
+    const w=addWindow(env,"org.kde.kdeglance",{x:100,y:100,width:400,height:200});
+    w.caption="second.png — KDEGlance";w.captionChanged();
+    w.caption="first.png — KDEGlance";w.captionChanged();
+    env.geometryReplies.shift()(JSON.stringify({ignored:true}));
+    assert.strictEqual(env.geometryReplies.length,1);
+    const latest=env.calls.filter(c=>c[3]==="WaitForGeometry").at(-1);
+    assert.strictEqual(latest[5],"first.png — KDEGlance");
 });
 
 test("coordinated zoom cannot resize a maximized window", () => {

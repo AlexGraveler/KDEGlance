@@ -530,8 +530,16 @@ void MediaView::onError(QMediaPlayer::Error error, const QString &message)
         return;
     }
     const QString text = friendlyError(error, message);
-    unload();
-    Q_EMIT failed(text);
+    const auto generation = m_loadGeneration;
+    // The FFmpeg backend can emit errorOccurred while creating its streams.
+    // Clearing the source there destroys the engine on its own call stack.
+    // Finish error handling after the backend returns, and discard errors if
+    // navigation or closing has already replaced this load in the meantime.
+    QTimer::singleShot(0, this, [this, text, generation] {
+        if (!m_active || generation != m_loadGeneration) return;
+        unload();
+        Q_EMIT failed(text);
+    });
 }
 
 void MediaView::updateMetaData()

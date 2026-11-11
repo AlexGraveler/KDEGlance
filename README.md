@@ -1,4 +1,4 @@
-# KDEGlance 2.0.3
+# KDEGlance 2.0.4
 
 Quick Look-style file previews for **Dolphin on KDE Plasma 6**. Select a file and
 press **Space** to inspect it in a minimal, frameless window. Browse the folder
@@ -184,22 +184,22 @@ limited by LibreOffice; password-protected or damaged documents may fail.
 System-wide KWin bindings can intercept modified mouse gestures before the viewer
 receives them. KDEGlance does not change global shortcuts or mouse bindings.
 
-## Fedora 44
+## Fedora 44 / Fedora 45
 
-KDEGlance 2.0.3 includes a Fedora 44 RPM recipe and the common Wayland geometry,
-image/video aspect-fit and Zoom to Cursor fixes developed on Fedora.
-See [Fedora installation and reproducible builds](packaging/fedora/README.md)
-and [the 2.0.3 build status](packaging/fedora/RELEASE-2.0.3.md).
-
-Build on Fedora 44 from this repository:
+KDEGlance 2.0.4 fixes image zoom after navigation and prevents a video-player
+crash during decoder error handling. The fixes were validated on Fedora.
+Download the existing Fedora 44 or Fedora 45 x86_64 RPM from the
+[2.0.4 release](https://github.com/AlexGraveler/KDEGlance/releases/tag/v2.0.4)
+and verify `SHA256SUMS` before installation:
 
 ```bash
-sudo dnf install rpm-build rpmdevtools dnf5-plugins
-sudo dnf builddep packaging/fedora/kdeglance.spec
-python3 packaging/fedora/make-source-tarball.py
-rpmbuild -ba --define "_topdir $PWD/packaging/fedora/rpmbuild" packaging/fedora/kdeglance.spec
-sudo dnf install ./packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.0.3-1.fc44.*.rpm
+# Fedora 44; use the fc45 file on Fedora 45.
+sudo dnf install ./kdeglance-2.0.4-1.fc44.x86_64.rpm
 ```
+
+The published 2.0.3 Arch/CachyOS package and its build configuration remain
+unchanged; 2.0.4 supplies no new Arch package. See [release notes](RELEASE-NOTES.md)
+for validation results and known build-test limitations.
 
 The binary RPM does not require LibreOffice. To enable Office previews separately,
 install `libreoffice-writer`. Reopen Dolphin after installation; no global

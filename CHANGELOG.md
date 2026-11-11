@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.4 — 2026-11-11
+
+- Keep image wheel zoom working after navigation by renewing stale KWin geometry waits.
+- Defer media error cleanup to avoid clearing a source inside a decoder callback; ignore stale errors after navigation or closing.
+- Add regression coverage for both races.
+- Publish the existing Fedora 44 and Fedora 45 RPM builds; the published 2.0.3 Arch/CachyOS package and its build configuration remain unchanged.
+
 ## 2.0.3 — 2026-11-10
 
 - Merge Fedora 44 packaging into the common Arch/CachyOS source tree.
