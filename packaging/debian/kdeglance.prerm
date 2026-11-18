@@ -1,0 +1,16 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+set -e
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        # A resident viewer keeps its already-mapped binary. Stop it so D-Bus
+        # starts the new binary on the next request; this also unloads its KWin
+        # script. Failure is fine: it may not be running.
+        pkill -TERM -x kdeglance >/dev/null 2>&1 || true
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
