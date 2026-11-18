@@ -13,3 +13,4 @@ __pycache__/
 *.moc
 /packaging/fedora/rpmbuild/
 /.release-work/
+/packaging/debian/build/
