@@ -1,4 +1,4 @@
-# KDEGlance 2.0.4 format support
+# KDEGlance 2.1.0 format support
 
 Source of truth: `src/core/filetype.cpp`, `src/viewer/formatregistry.cpp`, the
 installed Qt plugins, LibRaw, FFmpeg, Poppler and LibreOffice. File-type detection
@@ -44,3 +44,6 @@ QT_QPA_PLATFORM=offscreen build/src/kdeglance --probe-formats /path/to/samples
 Mandatory decoder failures fail the format test. Conditional/experimental formats
 are distinguished in its output rather than silently removed. Release validation
 records sample counts and any missing optional SoundFont separately.
+
+Text syntax highlighting requires KF6 KSyntaxHighlighting (`syntax-highlighting` on Arch).
+LibreOffice is optional for runtime, builds and tests; only supported Office previews need it.

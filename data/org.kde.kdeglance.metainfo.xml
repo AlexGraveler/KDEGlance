@@ -23,6 +23,9 @@
     <category>Utility</category>
   </categories>
   <releases>
+    <release version="2.1.0" date="2026-11-23">
+      <description><p>Add syntax highlighting, persistent Markdown mode, shared filenames, independent audio/video repeat, improved video zoom and a new audio placeholder. Retain the KWin and decoder lifecycle fixes from 2.0.4.</p></description>
+    </release>
     <release version="2.0.4" date="2026-11-11"/>
     <release version="2.0.3" date="2026-11-10"/>
     <release version="2.0.2" date="2026-10-29"/>

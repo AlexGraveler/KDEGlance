@@ -389,6 +389,29 @@ private Q_SLOTS:
         QCOMPARE(view.player()->playbackState(),QMediaPlayer::StoppedState);
     }
 
+    void repeatAudioButtonControlsPlayback()
+    {
+        Settings settings(path(u"audio-repeat.json"_s)); settings.setMuted(true);
+        MediaView view(&settings); view.resize(400,400); view.show();
+        QVERIFY(loadAndWait(view,u"plain.wav"_s));
+        auto *repeat=view.findChild<QAbstractButton*>(u"repeatPlayback"_s);
+        QVERIFY(repeat); QVERIFY(!repeat->isHidden()); QVERIFY(repeat->isCheckable()); QVERIFY(!repeat->isChecked());
+        QVERIFY(!view.controls()->rotateButton()->isVisible());
+        QVERIFY(!repeat->geometry().intersects(view.controls()->volumeButton()->geometry()));
+        QVERIFY(!repeat->geometry().intersects(view.controls()->volumeSlider()->geometry()));
+        repeat->click(); QVERIFY(settings.moduleLoopAudio()); QVERIFY(!settings.moduleLoopVideo());
+        QTest::qWait(2400);
+        QCOMPARE(view.player()->playbackState(),QMediaPlayer::PlayingState);
+        QVERIFY(view.player()->position()<view.player()->duration());
+        settings.setModuleLoopVideo(true);
+        QVERIFY(loadAndWait(view,u"portrait.mp4"_s)); QVERIFY(repeat->isChecked());
+        repeat->click(); QVERIFY(!settings.moduleLoopVideo()); QVERIFY(settings.moduleLoopAudio());
+        QVERIFY(loadAndWait(view,u"plain.wav"_s)); QVERIFY(repeat->isChecked());
+        repeat->click(); QVERIFY(!settings.moduleLoopAudio());
+        QVERIFY(waitFor([&]{return view.player()->mediaStatus()==QMediaPlayer::EndOfMedia;},3500));
+        QCOMPARE(view.player()->playbackState(),QMediaPlayer::StoppedState);
+        view.unload(); QVERIFY(view.player()->source().isEmpty());
+    }
     void loopVideo()
     {
         m_settings->setLoopVideo(true);

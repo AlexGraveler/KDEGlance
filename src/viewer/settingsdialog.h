@@ -5,6 +5,7 @@
 #include <QDialog>
 
 class QCheckBox;
+class QButtonGroup;
 class QKeySequenceEdit;
 class QLabel;
 
@@ -33,10 +34,11 @@ private:
     QCheckBox *m_focusClose;
     QCheckBox *m_prestart;
     QCheckBox *m_autoplay;
-    QCheckBox *m_loop;
     QCheckBox *m_hwdec;
     QCheckBox *m_rawEmbedded;
     QLabel *m_sizes;
+    QCheckBox *m_syntax;
+    QButtonGroup *m_filename;
     bool m_loading = false;
 };
 

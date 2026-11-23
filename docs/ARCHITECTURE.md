@@ -1,4 +1,4 @@
-# KDEGlance 2.0.4 architecture
+# KDEGlance 2.1.0 architecture
 
 The application is C++20/Qt6/KF6. The resident viewer, Dolphin plugins, settings
 schema and D-Bus identities are preserved from the accepted local implementation.
@@ -92,3 +92,15 @@ settles. Text/remote/PDF work runs asynchronously. PDF pages use a bounded raste
 cache. Office conversion uses temporary files/profile, disables macros/link
 updates and does not save to the source. Enter closes/cancels playback before
 launching the original URL through KIO, without quitting the resident service.
+
+## 2.1.0 additions
+
+TextView uses KF6 KSyntaxHighlighting with automatic definition/theme selection;
+disabling it detaches the highlighter and clears prior formats. The persistent
+`text` group holds `markdownRendered` and `syntaxHighlighting`. The `general`
+group stores filenamePosition (hidden/top/bottom). One filename overlay in
+PreviewWindow handles every module and does not intercept pointer events.
+MediaView shares the existing repeat glyph between modes and stores loopAudio
+in the audio group, independently from video.loopVideo. Only Office-specific
+tests need the optional LibreOffice executable. Geometry and decoder lifecycle
+coordination from 2.0.4 remains part of the common source.

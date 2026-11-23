@@ -5,6 +5,7 @@
 #include <memory>
 class QPlainTextEdit;
 class QTextBrowser;
+namespace KSyntaxHighlighting { class SyntaxHighlighter; class Repository; }
 namespace KDEGlance {
 struct TextSession;
 class TextView : public ContentView {
@@ -22,14 +23,26 @@ public:
     void loadMore();
     bool handleKey(QKeyEvent* event) override;
     void toggleMarkdown();
+    void setSettings(Settings* settings);
+    void applySettings();
+Q_SIGNALS:
+    void presentationSettingsChanged();
+protected:
+    void changeEvent(QEvent* event) override;
 
 private:
     void beginRead();
+    void updateHighlighting();
+    void applyMarkdownMode();
+    Settings* m_settings = nullptr;
+    std::unique_ptr<KSyntaxHighlighting::Repository> m_repository;
+
     PreviewItem m_item;
     std::shared_ptr<TextSession> m_session;
     quint64 m_generation = 0;
     QPlainTextEdit* m_editor;
     QTextBrowser* m_markdown;
+    KSyntaxHighlighting::SyntaxHighlighter* m_highlighter;
     bool m_hasMore = false;
     QTimer m_appendTimer;
     QString m_pending;

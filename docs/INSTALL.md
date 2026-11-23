@@ -1,4 +1,4 @@
-# Install, update and remove KDEGlance 2.0.4
+# Install, update and remove KDEGlance 2.1.0
 
 ## Binary package
 
@@ -7,7 +7,7 @@ The release supplies a tested CachyOS/Arch **x86_64** package. Download it from
 release checksums, then install it using the system package manager:
 
 ```bash
-sudo pacman -U ./kdeglance-2.0.3-1-x86_64.pkg.tar.zst
+sudo pacman -U ./kdeglance-2.1.0-1-x86_64.pkg.tar.zst
 ```
 
 Pacman resolves the declared dependencies. Close and reopen Dolphin afterward;
@@ -20,22 +20,34 @@ retains its normal meaning. The context menu also offers KDEGlance: Quick Look.
 
 ## Build an Arch package from source
 
-Install `base-devel`, `cmake`, `ninja` and `pkgconf`. Git is needed only for cloning.
-Use a regular user account, not root:
+Use a regular user account with `base-devel` and Git installed. The recipe is
+pinned to the official v2.1.0 source archive and runs its tests automatically.
+
+**Without LibreOffice:**
 
 ```bash
 git clone https://github.com/AlexGraveler/KDEGlance.git
-cd KDEGlance
-git checkout v2.0.3
-cd packaging/arch
-./make-source-tarball.sh
+cd KDEGlance/packaging/arch
 makepkg -si
 ```
 
-The release source archive excludes the external Arch PKGBUILD to avoid a
-self-referential source checksum. Obtain the recipe from the matching Git tag. The helper creates a clean local source archive and
-updates its SHA-256 in PKGBUILD. `makepkg` builds Release, runs check(), then asks
-Pacman to install. Do not skip the mandatory tests for release artifacts.
+**With LibreOffice:**
+
+```bash
+sudo pacman -S libreoffice-fresh
+git clone https://github.com/AlexGraveler/KDEGlance.git
+cd KDEGlance/packaging/arch
+makepkg -si
+```
+
+LibreOffice is needed only for supported Office document previews. Without it,
+Office conversion tests skip and all other tests run. Images, text, PDF, audio
+and video work independently. Missing Office support is explained in the viewer.
+The converter can be installed later without rebuilding KDEGlance.
+
+The source archive excludes PKGBUILD/.SRCINFO to avoid a self-referential checksum.
+Get those files and kdeglance.install from the matching Git tag or release assets.
+Do not use --nocheck to prepare a release artifact.
 
 For a development build after dependencies are installed:
 
@@ -51,15 +63,18 @@ The authoritative list is `packaging/arch/PKGBUILD`.
 
 - Qt: qt6-base, qt6-multimedia, qt6-multimedia-ffmpeg, qt6-svg,
   qt6-imageformats and qt6-5compat.
-- KDE: dolphin, kio, kcoreaddons, kservice, kwindowsystem, kimageformats, kio-fuse.
-- Rendering/media: poppler-qt6, LibreOffice providing `/usr/bin/libreoffice`,
+- KDE: dolphin, kio, kcoreaddons, kservice, kwindowsystem, kimageformats, kio-fuse, syntax-highlighting.
+- Rendering/media: poppler-qt6,
   libraw, ffmpeg and hicolor-icon-theme.
 - Optional formats use libheif, libavif, libjxl, openexr and openjpeg2 as supplied
   by the installed image plugins.
 - Experimental MIDI requires fluidsynth plus a General MIDI SoundFont, such as
   soundfont-fluid. Without them KDEGlance reports the missing dependency.
 
-The binary package records its build-time Qt version as a minimum runtime
+LibreOffice is an optional runtime and test converter, never a required build dependency.
+
+The supplied CachyOS binary targets x86-64-v3 and Qt >= 6.12.0. Build from source
+on other CPU/Qt combinations. The binary package records its build-time Qt version as a minimum runtime
 dependency; source builds retain the CMake Qt 6.8 minimum. Qt plugins built against
 a newer Qt minor cannot be loaded by an older Qt runtime.
 

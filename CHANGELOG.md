@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.1.0 — 2026-11-23
+
+- Add automatic KSyntaxHighlighting with theme matching and an optional text setting.
+- Remember Markdown source/rendered mode across files and restarts.
+- Add a shared background-free filename overlay with persistent placement and larger text.
+- Add independent audio repeat and remove the redundant video-repeat settings checkbox.
+- Hide video controls after three seconds or on pointer leave; keep controls hidden initially outside.
+- Resize video and its window together before continuing zoom inside the screen limit.
+- Replace the audio placeholder with an approved darker vector design without bottom shading.
+- Keep native one-page settings and fully optional LibreOffice build/test/runtime support.
+- Include the complete 2.0.4 lineage: stale KWin-wait renewal and deferred decoder cleanup,
+  along with 2.0.3 geometry/fractional-scale fixes and earlier PDF scrolling corrections.
+
 ## 2.0.4 — 2026-11-11
 
 - Keep image wheel zoom working after navigation by renewing stale KWin geometry waits.

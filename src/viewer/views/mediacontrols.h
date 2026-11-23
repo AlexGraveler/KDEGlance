@@ -54,8 +54,9 @@ private:
 
 /*
  * Playback controls: [play/pause] time [seek] duration [loop] [fullscreen] [volume].
- * Video mode shows loop and fullscreen; audio mode shows title and artist
- * above the row. The bar only reports user intent; MediaView applies it.
+ * Video mode shows loop and fullscreen; audio mode shows artist metadata
+ * above the row. Filenames use the shared preview overlay. The bar only
+ * reports user intent; MediaView applies it.
  */
 class MediaControls : public QWidget
 {
@@ -68,6 +69,7 @@ public:
     explicit MediaControls(QWidget *parent = nullptr);
 
     void setMode(Mode mode);
+    void setScrimEnabled(bool enabled);
     void setPlaying(bool playing);
     void setDuration(qint64 ms);
     void setPosition(qint64 ms);
@@ -104,6 +106,7 @@ private:
     void relayout();
 
     Mode m_mode = Mode::Video;
+    bool m_scrimEnabled = true;
     OverlayButton *m_play;
     OverlayButton *m_loop;
     OverlayButton *m_fullscreen;

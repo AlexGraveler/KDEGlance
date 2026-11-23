@@ -1,12 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 Name:           kdeglance
-Version:        2.0.4
+Version:        2.1.0
 Release:        1%{?dist}
 Summary:        Quick Look style file previews for Dolphin
 License:        GPL-3.0-or-later
 URL:            https://github.com/AlexGraveler/KDEGlance
-# Generated locally by make-source-tarball.py; no published Fedora release yet.
-Source0:        %{name}-%{version}.tar.gz
+Source0:        https://github.com/AlexGraveler/KDEGlance/releases/download/v%{version}/%{name}-%{version}.tar.gz
 
 BuildRequires:  gcc-c++
 BuildRequires:  cmake
@@ -28,6 +27,7 @@ BuildRequires:  pkgconfig(poppler-qt6)
 BuildRequires:  pkgconfig(libraw_r)
 BuildRequires:  cmake(KF6KIO)
 BuildRequires:  cmake(KF6Service)
+BuildRequires:  cmake(KF6SyntaxHighlighting)
 BuildRequires:  cmake(KF6CoreAddons)
 BuildRequires:  cmake(KF6WindowSystem)
 BuildRequires:  desktop-file-utils
@@ -39,7 +39,6 @@ BuildRequires:  ImageMagick
 BuildRequires:  python3
 BuildRequires:  nodejs
 BuildRequires:  qpdf
-BuildRequires:  libreoffice-writer
 
 # Qt rejects plugins compiled against a newer minor version.
 Requires:       qt6-qtbase%{?_isa} >= %{_qt6_version}
@@ -103,6 +102,11 @@ QT_QPA_PLATFORM=offscreen %ctest --output-on-failure --timeout 900
 %{_datadir}/kdeglance/
 
 %changelog
+* Mon Nov 23 2026 KDEGlance contributors - 2.1.0-1
+- Release 2.1.0 with syntax highlighting, Markdown memory and shared filename UI
+- Improve media zoom/controls and add independent audio/video repeat
+- Keep LibreOffice optional for builds, tests and runtime
+
 * Wed Nov 11 2026 KDEGlance contributors - 2.0.4-1
 - Renew KWin geometry waits after image navigation
 - Defer decoder error cleanup until the backend returns

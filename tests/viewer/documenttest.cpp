@@ -399,11 +399,22 @@ private Q_SLOTS:
         QVERIFY(after <= before + 4);
     }
 
+    void missingOfficeReportsDependency()
+    {
+        if (hasLibreOffice())
+            QSKIP("Missing-LibreOffice handling requires an environment without the converter.");
+        OfficeView view;
+        QSignalSpy failed(&view, &ContentView::failed);
+        view.load(item(u"unicode.txt"_s));
+        QCOMPARE(failed.size(), 1);
+        QVERIFY(failed.first().first().toString().contains(u"LibreOffice"_s));
+        QVERIFY(!view.converting());
+    }
+
     void officeCancelStopsProcess()
     {
-        if (!QFileInfo(u"/usr/bin/libreoffice"_s).isExecutable()
-            && QStandardPaths::findExecutable(u"libreoffice"_s).isEmpty())
-            QSKIP("LibreOffice is not installed");
+        if (!hasLibreOffice())
+            QSKIP("LibreOffice is not installed; Office process cancellation requires it.");
         OfficeView v;
         QSignalSpy failed(&v, &ContentView::failed);
         v.load(item(u"unicode.txt"_s));

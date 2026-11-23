@@ -15,7 +15,7 @@ sudo dnf install rpm-build rpmdevtools dnf5-plugins
 sudo dnf builddep packaging/fedora/kdeglance.spec
 python3 packaging/fedora/make-source-tarball.py
 rpmbuild -ba --define "_topdir $PWD/packaging/fedora/rpmbuild" packaging/fedora/kdeglance.spec
-sudo dnf install ./packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.0.4-1.fc44.*.rpm
+sudo dnf install ./packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.1.0-1.fc44.*.rpm
 ```
 
 The archive includes current source edits without modifying the Arch recipe or
@@ -25,8 +25,9 @@ build when preparing distributable binaries; a host build is not a clean-root
 certification. Do not use `--nodeps` to install the package.
 
 `%check` runs CTest, desktop-file validation and offline AppStream validation.
-LibreOffice Writer, FFmpeg, ImageMagick, Node.js, qpdf and Python are test build
-dependencies. LibreOffice is deliberately absent from runtime Requires and weak
+FFmpeg, ImageMagick, Node.js, qpdf and Python are test build
+dependencies. KF6 KSyntaxHighlighting is required. LibreOffice Writer is optional
+for Office conversion tests; those tests skip if the converter is absent. LibreOffice is deliberately absent from runtime Requires and weak
 dependencies: installing the binary RPM does not pull it in. To enable Office
 previews separately, use `sudo dnf install libreoffice-writer`.
 
@@ -38,7 +39,7 @@ MIME associations or SELinux policy to install KDEGlance.
 ## Verification
 
 ```bash
-rpm -qp --requires packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.0.4-1.fc44.*.rpm
+rpm -qp --requires packaging/fedora/rpmbuild/RPMS/$(uname -m)/kdeglance-2.1.0-1.fc44.*.rpm
 rpm -ql kdeglance
 rpm -V kdeglance
 kdeglance --version

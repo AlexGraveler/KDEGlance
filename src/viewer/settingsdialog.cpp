@@ -6,6 +6,9 @@
 #include "settings.h"
 
 #include <QCheckBox>
+#include <QButtonGroup>
+#include <QGroupBox>
+#include <QRadioButton>
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QHBoxLayout>
@@ -28,7 +31,6 @@ SettingsDialog::SettingsDialog(Settings *settings, QWidget *parent)
     , m_focusClose(new QCheckBox(tr_("Close the preview when it loses focus"), this))
     , m_prestart(new QCheckBox(tr_("Start KDEGlance in the background together with Dolphin (faster first preview)"), this))
     , m_autoplay(new QCheckBox(tr_("Start playing audio and video automatically"), this))
-    , m_loop(new QCheckBox(tr_("Repeat videos"), this))
     , m_hwdec(new QCheckBox(tr_("Use hardware video decoding when available (applies after restart)"), this))
     , m_rawEmbedded(new QCheckBox(tr_("Show the camera's embedded preview of RAW photos first (much faster)"), this))
     , m_sizes(new QLabel(this))
@@ -49,10 +51,31 @@ SettingsDialog::SettingsDialog(Settings *settings, QWidget *parent)
     form->addRow(tr_("Quick Look key in Dolphin:"), shortcutRow);
     layout->addLayout(form);
 
-    for (QCheckBox *box : {m_sync, m_focusClose, m_prestart, m_autoplay, m_loop, m_hwdec, m_rawEmbedded}) {
+    for (QCheckBox *box : {m_sync, m_focusClose, m_prestart, m_autoplay, m_hwdec, m_rawEmbedded}) {
         layout->addWidget(box);
         connect(box, &QCheckBox::toggled, this, &SettingsDialog::commit);
     }
+
+    auto *filenameBox = new QGroupBox(tr_("Filename display"), this);
+    auto *filenameLayout = new QHBoxLayout(filenameBox);
+    m_filename = new QButtonGroup(this);
+    const QStringList labels{tr_("Do not show"), tr_("Show at top"), tr_("Show at bottom")};
+    for (int i = 0; i < labels.size(); ++i) {
+        auto *radio = new QRadioButton(labels[i], filenameBox);
+        m_filename->addButton(radio, i);
+        filenameLayout->addWidget(radio);
+    }
+    connect(m_filename, &QButtonGroup::idClicked, this, &SettingsDialog::commit);
+    layout->addWidget(filenameBox);
+    m_syntax = new QCheckBox(tr_("Enable syntax highlighting in text files"), this);
+    m_syntax->setObjectName(u"syntaxHighlighting"_s);
+    connect(m_syntax, &QCheckBox::toggled, this, &SettingsDialog::commit);
+    layout->addWidget(m_syntax);
+    auto *syntaxHint = new QLabel(tr_("Syntax highlighting may slow down opening and viewing large files."), this);
+    syntaxHint->setWordWrap(true);
+    syntaxHint->setForegroundRole(QPalette::PlaceholderText);
+    auto hintFont = syntaxHint->font(); hintFont.setItalic(true); syntaxHint->setFont(hintFont);
+    layout->addWidget(syntaxHint);
 
     auto *sizesRow = new QHBoxLayout;
     sizesRow->addWidget(m_sizes, 1);
@@ -103,9 +126,10 @@ void SettingsDialog::load()
     m_focusClose->setChecked(m_settings->closeOnFocusLoss());
     m_prestart->setChecked(m_settings->prestartService());
     m_autoplay->setChecked(m_settings->autoplay());
-    m_loop->setChecked(m_settings->moduleLoopVideo());
     m_hwdec->setChecked(m_settings->hardwareDecoding());
     m_rawEmbedded->setChecked(m_settings->rawPreferEmbeddedPreview());
+    m_syntax->setChecked(m_settings->syntaxHighlighting());
+    m_filename->button(int(m_settings->filenamePosition()))->setChecked(true);
     QStringList sizes;
     for (SizeCategory c : {SizeCategory::Image, SizeCategory::Video, SizeCategory::Audio, SizeCategory::Document, SizeCategory::Pdf, SizeCategory::Text, SizeCategory::Office}) {
         if (auto s = m_settings->savedSize(c)) {
@@ -131,9 +155,10 @@ void SettingsDialog::commit()
     m_settings->setCloseOnFocusLoss(m_focusClose->isChecked());
     m_settings->setPrestartService(m_prestart->isChecked());
     m_settings->setAutoplay(m_autoplay->isChecked());
-    m_settings->setModuleLoopVideo(m_loop->isChecked());
     m_settings->setHardwareDecoding(m_hwdec->isChecked());
     m_settings->setRawPreferEmbeddedPreview(m_rawEmbedded->isChecked());
+    m_settings->setSyntaxHighlighting(m_syntax->isChecked());
+    m_settings->setFilenamePosition(Settings::FilenamePosition(m_filename->checkedId()));
     Q_EMIT changed();
 }
 

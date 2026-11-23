@@ -9,6 +9,7 @@
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
 #include <QImage>
 #include <QImageWriter>
 #include <QPainter>
@@ -25,6 +26,12 @@ namespace KDEGlanceTest
 inline QString ffmpeg()
 {
     return QStandardPaths::findExecutable(QStringLiteral("ffmpeg"));
+}
+
+inline bool hasLibreOffice()
+{
+    return QFileInfo(QStringLiteral("/usr/bin/libreoffice")).isExecutable()
+        || !QStandardPaths::findExecutable(QStringLiteral("libreoffice")).isEmpty();
 }
 
 inline QString imagemagick()

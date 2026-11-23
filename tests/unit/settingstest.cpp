@@ -103,6 +103,18 @@ private Q_SLOTS:
         QCOMPARE(loaded.savedSize(SizeCategory::Office),std::optional<QSize>(QSize(620,710)));
     }
 
+    void repeatSettingsAreIndependent()
+    {
+        Settings s(path()); QVERIFY(!s.moduleLoopAudio());
+        s.setModuleLoopAudio(true); QVERIFY(!s.moduleLoopVideo());
+        s.setModuleLoopVideo(true); QVERIFY(s.save());
+        Settings reloaded(path()); reloaded.load();
+        QVERIFY(reloaded.moduleLoopAudio()); QVERIFY(reloaded.moduleLoopVideo());
+        reloaded.resetModule(SizeCategory::Audio);
+        QVERIFY(!reloaded.moduleLoopAudio()); QVERIFY(reloaded.moduleLoopVideo());
+        reloaded.setModuleLoopAudio(true); reloaded.resetModule(SizeCategory::Video);
+        QVERIFY(reloaded.moduleLoopAudio()); QVERIFY(!reloaded.moduleLoopVideo());
+    }
     void sizesAreSeparatePerCategory()
     {
         Settings s(path());

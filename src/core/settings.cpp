@@ -104,6 +104,7 @@ QJsonObject Settings::defaults()
              {u"shortcut"_s, u"Space"_s},
              {u"closeOnFocusLoss"_s, true},
              {u"prestartService"_s, true},
+             {u"filenamePosition"_s, u"top"_s},
          }},
         {Window,
          QJsonObject{
@@ -118,6 +119,8 @@ QJsonObject Settings::defaults()
              {u"loopVideo"_s, false},
              {u"hardwareDecoding"_s, true},
          }},
+        {u"audio"_s, QJsonObject{{u"loopAudio"_s, false}}},
+        {u"text"_s, QJsonObject{{u"markdownRendered"_s, false}, {u"syntaxHighlighting"_s, true}}},
         {Image,
          QJsonObject{
              {u"rawPreferEmbeddedPreview"_s, true},
@@ -353,6 +356,22 @@ void Settings::setPrestartService(bool enabled)
     setValue(General, u"prestartService"_s, enabled);
 }
 
+Settings::FilenamePosition Settings::filenamePosition() const
+{
+    const auto position = value(General, u"filenamePosition"_s).toString();
+    if (position == u"hidden"_s) return FilenamePosition::Hidden;
+    if (position == u"bottom"_s) return FilenamePosition::Bottom;
+    return FilenamePosition::Top;
+}
+void Settings::setFilenamePosition(FilenamePosition position)
+{
+    setValue(General, u"filenamePosition"_s, position == FilenamePosition::Hidden ? u"hidden"_s : position == FilenamePosition::Bottom ? u"bottom"_s : u"top"_s);
+}
+bool Settings::markdownRendered() const { return boolValue(u"text"_s, u"markdownRendered"_s); }
+void Settings::setMarkdownRendered(bool enabled) { setValue(u"text"_s, u"markdownRendered"_s, enabled); }
+bool Settings::syntaxHighlighting() const { return boolValue(u"text"_s, u"syntaxHighlighting"_s); }
+void Settings::setSyntaxHighlighting(bool enabled) { setValue(u"text"_s, u"syntaxHighlighting"_s, enabled); }
+
 std::optional<QSize> Settings::savedSize(SizeCategory category) const
 {
     const QJsonObject sizes = value(Window, u"sizes"_s).toObject();
@@ -407,9 +426,13 @@ void Settings::resetModule(SizeCategory category)
         auto group = defaults().value(Media).toObject();
         group.remove(u"hardwareDecoding"_s); // shared process-level decoder policy
         group.remove(u"autoplay"_s); // shared application policy is not a display parameter
-        if (category == SizeCategory::Audio) group.remove(u"loopVideo"_s);
+        if (category == SizeCategory::Audio) {
+            group.remove(u"loopVideo"_s);
+            group.insert(u"loopAudio"_s, false);
+        }
         m_data.insert(key, group);
-    } else m_data.remove(key);
+    } else if (category == SizeCategory::Text) m_data.insert(key, defaults().value(u"text"_s));
+    else m_data.remove(key);
 }
 double Settings::moduleVolume(SizeCategory c) const
 {
@@ -421,6 +444,8 @@ bool Settings::moduleLoopVideo() const { const auto v=value(u"video"_s,u"loopVid
 void Settings::setModuleVolume(SizeCategory c,double v) { if(std::isfinite(v)) setValue(sizeCategoryKey(c),u"volume"_s,std::clamp(v,0.0,1.0)); }
 void Settings::setModuleMuted(SizeCategory c,bool v) { setValue(sizeCategoryKey(c),u"muted"_s,v); }
 void Settings::setModuleLoopVideo(bool v) { setValue(u"video"_s,u"loopVideo"_s,v); }
+bool Settings::moduleLoopAudio() const { return boolValue(u"audio"_s,u"loopAudio"_s); }
+void Settings::setModuleLoopAudio(bool v) { setValue(u"audio"_s,u"loopAudio"_s,v); }
 
 double Settings::volume() const
 {

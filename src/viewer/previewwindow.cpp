@@ -10,6 +10,7 @@
 #include "views/imageview.h"
 #include "views/infoview.h"
 #include "views/mediaview.h"
+#include "views/mediacontrols.h"
 #include "views/textview.h"
 #include "views/pdfview.h"
 #include "views/officeview.h"
@@ -32,6 +33,7 @@
 #endif
 
 #include <cmath>
+#include <algorithm>
 
 using namespace Qt::StringLiterals;
 
@@ -52,6 +54,35 @@ int categoryIndex(SizeCategory c)
 
 // Paints the rounded corners transparent (antialiased) on top of all
 // content, so every child can paint square without caring about the shape.
+class FilenameOverlay : public QWidget
+{
+public:
+    explicit FilenameOverlay(QWidget *parent) : QWidget(parent) {
+        setObjectName(u"filenameOverlay"_s);
+        setAttribute(Qt::WA_TransparentForMouseEvents);
+        setFocusPolicy(Qt::NoFocus);
+        hide();
+    }
+    QString filename;
+    QFont displayFont() const {
+        QFont result = font();
+        if (result.pointSizeF() > 0) result.setPointSizeF(result.pointSizeF() * 1.2);
+        else result.setPixelSize(qMax(1, qRound(result.pixelSize() * 1.2)));
+        return result;
+    }
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setPen(Qt::white);
+        const auto textFont = displayFont();
+        p.setFont(textFont);
+        const QFontMetrics metrics(textFont);
+        p.drawText(rect().adjusted(10, 0, -10, 0), Qt::AlignCenter | Qt::TextSingleLine,
+            metrics.elidedText(filename, Qt::ElideMiddle, qMax(1,width()-20)));
+    }
+};
+
 class CornerMask : public QWidget
 {
 public:
@@ -192,7 +223,23 @@ PreviewWindow::PreviewWindow(Settings *settings, QWidget *parent)
     , m_officeView(new OfficeView(this))
     , m_cornerMask(new CornerMask(this))
     , m_toast(new Toast(this))
+    , m_filename(new FilenameOverlay(this))
 {
+    m_textView->setSettings(m_settings);
+    connect(m_textView, &TextView::presentationSettingsChanged, this, &PreviewWindow::settingsModified);
+    m_filenameTimer.setSingleShot(true);
+    m_filenameTimer.setTimerType(Qt::PreciseTimer);
+    m_filenameTimer.setInterval(3000);
+    connect(&m_filenameTimer, &QTimer::timeout, this, [this] {
+        if (m_current == m_mediaView && m_mediaView->hasVideo()) return;
+        if (QGuiApplication::mouseButtons() != Qt::NoButton) m_filenameTimer.start();
+        else m_filename->hide();
+    });
+    connect(m_mediaView, &MediaView::controlsVisibilityChanged, this, [this](bool visible) {
+        if (m_current != m_mediaView || !m_mediaView->hasVideo()) return;
+        if (visible) showFilename(); else m_filename->hide();
+        layoutFilename();
+    });
     connect(m_remote, &RemoteResolver::resolved, this, [this](const QString &path) {
         const auto generation = m_itemGeneration;
         QPointer<PreviewWindow> guard(this);
@@ -274,6 +321,30 @@ PreviewWindow::PreviewWindow(Settings *settings, QWidget *parent)
         if(target.width()>area.width() || target.height()>area.height()) target.scale(QSizeF(area),Qt::KeepAspectRatio);
         resizeProgrammatically(target.toSize().expandedTo(QSize(1,1)), ResizeOrigin::Wheel);
     });
+    m_mediaView->setWheelResizesWindow(true);
+    connect(m_mediaView, &MediaView::wheelDisplaySizeRequested, this, [this](const QSizeF &requested, const QPointF &anchor) {
+        if (m_current != m_mediaView || m_resizing || isFullScreen() || isMaximized() || requested.isEmpty()) return;
+        auto *surface = m_mediaView->surface();
+        const QSizeF frame = surface->frameSize();
+        const QSizeF area = workArea().size();
+        if (frame.isEmpty() || area.isEmpty()) return;
+        const qreal requestedScale = requested.width() / frame.width();
+        const qreal maxScale = std::min(area.width() / frame.width(), area.height() / frame.height());
+        const qreal minScale = std::min(maxScale,
+            std::max(minimumWidth() / frame.width(), minimumHeight() / frame.height()));
+        const qreal windowScale = std::clamp(requestedScale, minScale, maxScale);
+        const QSize target = (frame * windowScale).toSize().boundedTo(area.toSize());
+        const QSizeF oldViewport = surface->size();
+        resizeProgrammatically(target, ResizeOrigin::Wheel);
+        // A wheel step changes the absolute display size. Rebase the relative
+        // zoom after resizing, rather than multiplying the new fit scale again.
+        const QSizeF fitted = frame.scaled(QSizeF(surface->size()), Qt::KeepAspectRatio);
+        if (fitted.isEmpty() || oldViewport.isEmpty()) return;
+        const QPointF newAnchor(anchor.x() * surface->width() / oldViewport.width(),
+                               anchor.y() * surface->height() / oldViewport.height());
+        const qreal zoom = requestedScale <= maxScale ? 1.0 : requested.width() / fitted.width();
+        surface->zoomAt(zoom, newAnchor);
+    });
     connect(m_mediaView, &MediaView::fullscreenRequested, this, &PreviewWindow::toggleFullscreen);
     connect(m_infoView, &InfoView::playStreamRequested, this, [this](const QUrl &url, const QString &title) {
         switchTo(m_mediaView);
@@ -308,6 +379,8 @@ PreviewWindow::PreviewWindow(Settings *settings, QWidget *parent)
 
     // See every mouse event inside the window (middle clicks, end of
     // interactive resizes) regardless of which child receives it.
+    setMouseTracking(true);
+    for (auto *child : findChildren<QWidget*>()) child->setMouseTracking(true);
     qApp->installEventFilter(this);
     applySettings();
 }
@@ -338,6 +411,10 @@ QSize PreviewWindow::defaultSizeFor(SizeCategory category)
 void PreviewWindow::applySettings()
 {
     m_imageView->setRawPreferEmbedded(m_settings->rawPreferEmbeddedPreview());
+    m_mediaView->controls()->setLoop(m_mediaView->hasVideo() ? m_settings->moduleLoopVideo() : m_settings->moduleLoopAudio());
+    m_textView->applySettings();
+    if (m_settings->filenamePosition() == Settings::FilenamePosition::Hidden) m_filename->hide();
+    else if (isVisible()) showFilename();
 }
 
 ContentView *PreviewWindow::currentView() const
@@ -465,6 +542,7 @@ void PreviewWindow::showItem(const PreviewItem &item, bool newSession)
     }
     setMinimumSize((item.type.kind == ContentKind::Image || item.type.kind == ContentKind::Svg || item.type.kind == ContentKind::Raw || item.type.kind == ContentKind::Video) ? QSize(1, 1) : Geometry::MinimumWindowSize);
     setWindowTitle(QFileInfo(item.path).fileName() + u" — KDEGlance"_s);
+    showFilename();
 
     if (!item.url.isLocalFile() && item.path.isEmpty()) {
         m_staging = false; // a loading card is deliberate, not partial media
@@ -572,6 +650,7 @@ void PreviewWindow::presentContent()
     setUpdatesEnabled(true);
     updateShadow();
     revealIfPending();
+    showFilename();
     update();
     Q_EMIT currentContentReady();
 }
@@ -699,6 +778,10 @@ void PreviewWindow::closePreview()
     m_photoZoomPlacement = {};
     m_photoZoomSteps = {};
     ++m_itemGeneration;
+    m_pointerInside = false;
+    m_mediaView->pointerLeftWindow();
+    m_filenameTimer.stop();
+    m_filename->hide();
     m_middleClickTimer.stop();
     m_revealTimer.stop();
     if (m_resizing) {
@@ -731,6 +814,7 @@ void PreviewWindow::onViewReady()
     }
     applyTargetSize(false);
     revealIfPending();
+    showFilename();
     Q_EMIT currentContentReady();
 }
 
@@ -746,6 +830,7 @@ void PreviewWindow::onViewFailed(const QString &message)
     m_category = SizeCategory::Image;
     applyTargetSize(false);
     revealIfPending();
+    showFilename();
     Q_EMIT currentContentReady();
 }
 
@@ -922,6 +1007,31 @@ void PreviewWindow::resizeEvent(QResizeEvent *event)
     }
 }
 
+void PreviewWindow::showFilename()
+{
+    if (!m_sessionActive || m_staging || !m_pointerInside || m_settings->filenamePosition() == Settings::FilenamePosition::Hidden) {
+        m_filename->hide();
+        return;
+    }
+    m_filename->filename = m_item.url.fileName();
+    if (m_filename->filename.isEmpty()) m_filename->filename = QFileInfo(m_item.path).fileName();
+    m_filename->setProperty("filename", m_filename->filename);
+    layoutFilename();
+    m_filename->setVisible(!m_filename->filename.isEmpty());
+    m_filename->update();
+    m_filenameTimer.start();
+}
+void PreviewWindow::layoutFilename()
+{
+    const int margin = 12;
+    const int h = QFontMetrics(m_filename->displayFont()).height() + 14;
+    int bottom = height() - margin;
+    if (m_current == m_mediaView && m_mediaView->controls()->isVisible())
+        bottom = m_mediaView->controls()->geometry().top() - 6;
+    const bool top = m_settings->filenamePosition() == Settings::FilenamePosition::Top;
+    m_filename->setGeometry(margin, top ? margin : qMax(margin, bottom - h), qMax(1,width()-2*margin),h);
+    m_filename->raise();
+}
 void PreviewWindow::layoutOverlays()
 {
     if (m_current) {
@@ -947,6 +1057,7 @@ void PreviewWindow::layoutOverlays()
         handle->setVisible(enabled && !m_staging);
         handle->raise();
     }
+    layoutFilename();
     m_cornerMask->setVisible(!m_staging);
     m_cornerMask->raise();
     if (m_toast->isVisible()) {
@@ -1159,11 +1270,27 @@ bool PreviewWindow::eventFilter(QObject *watched, QEvent *event)
     if (!widget || widget->window() != this) {
         return false;
     }
+    if (event->type() == QEvent::MouseMove || event->type() == QEvent::Enter
+        || event->type() == QEvent::MouseButtonPress || event->type() == QEvent::Wheel
+        || event->type() == QEvent::KeyPress) {
+        if (event->type() != QEvent::KeyPress) m_pointerInside = true;
+        showFilename();
+        if (m_pointerInside && m_current == m_mediaView) m_mediaView->notifyUserActivity();
+    }
     switch (event->type()) {
+    case QEvent::Leave:
+        if (widget == this) {
+            m_pointerInside = false;
+            m_filenameTimer.stop();
+            if (m_current == m_mediaView) m_mediaView->pointerLeftWindow();
+            m_filename->hide();
+        }
+        break;
     case QEvent::Wheel:
         // The compositor may return the pointer without a final mouse move.
         // Commit the real resize before processing a subsequent temporary zoom.
-        if(m_current==m_imageView && m_resizing && m_resizeClock.elapsed()>100 && QGuiApplication::mouseButtons()==Qt::NoButton)
+        if((m_current==m_imageView || (m_current==m_mediaView && m_mediaView->hasVideo()))
+            && m_resizing && m_resizeClock.elapsed()>100 && QGuiApplication::mouseButtons()==Qt::NoButton)
             endInteractiveResize();
         break;
     case QEvent::MouseButtonPress:

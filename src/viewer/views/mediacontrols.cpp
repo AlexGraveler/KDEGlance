@@ -237,7 +237,7 @@ void MediaControls::setMode(Mode mode)
 {
     m_mode = mode;
     m_rotate->setVisible(mode == Mode::Video);
-    m_loop->setVisible(mode == Mode::Video);
+    m_loop->show();
     m_fullscreen->setVisible(mode == Mode::Video);
     relayout();
     update();
@@ -358,9 +358,9 @@ void MediaControls::relayout()
         right -= ButtonSize + 2;
         m_fullscreen->setGeometry(right - ButtonSize, cy - ButtonSize / 2, ButtonSize, ButtonSize);
         right -= ButtonSize + 2;
-        m_loop->setGeometry(right - ButtonSize, cy - ButtonSize / 2, ButtonSize, ButtonSize);
-        right -= ButtonSize + 4;
     }
+    m_loop->setGeometry(right - ButtonSize, cy - ButtonSize / 2, ButtonSize, ButtonSize);
+    right -= ButtonSize + 4;
     // [time] seek [duration]
     const int seekLeft = x + timeWidth + 6; // room for the handle at 0:00
     const int seekRight = right - timeWidth - 4;
@@ -373,11 +373,18 @@ void MediaControls::resizeEvent(QResizeEvent *event)
     relayout();
 }
 
+void MediaControls::setScrimEnabled(bool enabled)
+{
+    if (m_scrimEnabled == enabled) return;
+    m_scrimEnabled = enabled;
+    update();
+}
+
 void MediaControls::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
     p.setClipPath(Style::windowShapeFor(this));
-    Style::paintControlsScrim(p, rect());
+    if (m_scrimEnabled) Style::paintControlsScrim(p, rect());
 
     p.setPen(QColor(255, 255, 255, 230));
     QFont small = font();
@@ -389,29 +396,20 @@ void MediaControls::paintEvent(QPaintEvent *)
     const QRect leftText(m_play->geometry().right() + 4, cy - fm.height() / 2, m_seek->x() - m_play->geometry().right() - 6, fm.height());
     p.drawText(leftText, Qt::AlignVCenter | Qt::AlignRight, Style::formatTime(m_position));
     const int afterSeek = m_seek->geometry().right() + 4;
-    const int durRight = (m_mode == Mode::Video ? m_loop->x() : (m_volume->isVisible() ? m_volume->x() : m_volumeButton->x())) - 4;
+    const int durRight = m_loop->x() - 4;
     p.drawText(QRect(afterSeek, cy - fm.height() / 2, std::max(0, durRight - afterSeek), fm.height()), Qt::AlignVCenter | Qt::AlignLeft,
                Style::formatTime(m_duration));
 
-    if (m_mode == Mode::Audio && !m_title.isEmpty()) {
-        QFont bold = font();
-        bold.setBold(true);
-        const QFontMetrics bfm(bold);
+    // The shared preview overlay is the only file/track title. Keep artist
+    // metadata as before; it is separate information rather than a second name.
+    if (m_mode == Mode::Audio && !m_artist.isEmpty()) {
         const int textLeft = Padding + 4;
         const int textWidth = width() - 2 * (Padding + 4);
-        int y = m_seek->geometry().top() - 8 - fm.height() - bfm.height();
-        if (m_artist.isEmpty()) {
-            y += fm.height();
-        }
-        p.setFont(bold);
-        p.setPen(Qt::white);
-        p.drawText(QRect(textLeft, y, textWidth, bfm.height()), Qt::AlignLeft | Qt::AlignVCenter, bfm.elidedText(m_title, Qt::ElideRight, textWidth));
-        if (!m_artist.isEmpty()) {
-            p.setFont(small);
-            p.setPen(QColor(255, 255, 255, 200));
-            p.drawText(QRect(textLeft, y + bfm.height(), textWidth, fm.height()), Qt::AlignLeft | Qt::AlignVCenter,
-                       fm.elidedText(m_artist, Qt::ElideRight, textWidth));
-        }
+        const int y = m_seek->geometry().top() - 8 - fm.height();
+        p.setFont(small);
+        p.setPen(QColor(255, 255, 255, 200));
+        p.drawText(QRect(textLeft, y, textWidth, fm.height()), Qt::AlignLeft | Qt::AlignVCenter,
+                   fm.elidedText(m_artist, Qt::ElideRight, textWidth));
     }
 }
 

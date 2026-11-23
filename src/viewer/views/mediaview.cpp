@@ -35,7 +35,7 @@ namespace KDEGlance
 
 namespace
 {
-constexpr int ControlsHideDelayMs = 2500;
+constexpr int ControlsHideDelayMs = 3000;
 constexpr int LoadTimeoutMs = 20000;
 constexpr int FirstFrameGraceMs = 1500;
 constexpr int SeekThrottleMs = 60;
@@ -191,10 +191,15 @@ MediaView::MediaView(Settings *settings, QWidget *parent)
     m_player->setVideoOutput(m_sink);
     m_surface->installEventFilter(this);
     m_controls->installEventFilter(this);
+    m_controls->setMouseTracking(true);
+    for (auto *child : m_controls->findChildren<QWidget*>()) {
+        child->setMouseTracking(true);
+        child->installEventFilter(this);
+    }
     applyVolume(m_settings->volume());
     m_audio->setMuted(m_settings->muted());
     m_controls->setVolume(m_settings->volume(), m_settings->muted());
-    m_controls->setLoop(m_settings->moduleLoopVideo());
+    m_controls->setLoop(m_hasVideo ? m_settings->moduleLoopVideo() : m_settings->moduleLoopAudio());
 
     connect(m_sink, &QVideoSink::videoFrameChanged, this, [this](const QVideoFrame &frame) {
         if (m_active && m_hasVideo) {
@@ -267,7 +272,8 @@ MediaView::MediaView(Settings *settings, QWidget *parent)
     });
     connect(m_controls, &MediaControls::muteToggled, this, &MediaView::toggleMute);
     connect(m_controls, &MediaControls::loopToggled, this, [this](bool loop) {
-        m_settings->setModuleLoopVideo(loop);
+        if (m_hasVideo) m_settings->setModuleLoopVideo(loop);
+        else m_settings->setModuleLoopAudio(loop);
     });
     connect(m_controls, &MediaControls::fullscreenToggled, this, &MediaView::fullscreenRequested);
 
@@ -278,15 +284,11 @@ MediaView::MediaView(Settings *settings, QWidget *parent)
     });
 
     m_hideTimer.setSingleShot(true);
+    m_hideTimer.setTimerType(Qt::PreciseTimer);
     m_hideTimer.setInterval(ControlsHideDelayMs);
     connect(&m_hideTimer, &QTimer::timeout, this, [this] {
-        if (m_hasVideo && m_player->playbackState() == QMediaPlayer::PlayingState && !m_controls->underMouse()
-            && !m_controls->seekSlider()->isDragging()) {
-            m_controls->hide();
-            if (window()->isFullScreen()) {
-                setCursor(Qt::BlankCursor);
-            }
-        }
+        if (m_hasVideo && !controlsEngaged()) hideControls();
+        else if (m_hasVideo) scheduleHide();
     });
     m_loadTimeout.setSingleShot(true);
     m_loadTimeout.setInterval(LoadTimeoutMs);
@@ -379,7 +381,7 @@ void MediaView::load(const PreviewItem &item)
     m_controls->setTrackInfo(m_title, QString());
     m_controls->setDuration(0);
     m_controls->setPosition(0);
-    m_controls->setLoop(m_settings->moduleLoopVideo());
+    m_controls->setLoop(m_hasVideo ? m_settings->moduleLoopVideo() : m_settings->moduleLoopAudio());
     showControls();
     if (!m_initialKindIsVideo) {
         lookForFolderCover();
@@ -415,6 +417,7 @@ void MediaView::startSource(const QUrl &source)
 
 void MediaView::unload()
 {
+    m_controlPressed = false;
     m_clickTimer.stop();
     m_panning = m_dragCandidate = false;
     ++m_loadGeneration;
@@ -481,7 +484,7 @@ void MediaView::onMediaStatus(QMediaPlayer::MediaStatus status)
         }
         break;
     case QMediaPlayer::EndOfMedia:
-        if (m_hasVideo && m_settings->moduleLoopVideo()) {
+        if (m_hasVideo ? m_settings->moduleLoopVideo() : m_settings->moduleLoopAudio()) {
             m_player->setPosition(0);
             m_player->play();
         } else {
@@ -574,6 +577,7 @@ void MediaView::updateMetaData()
 #endif
     if (!cover.isNull()) {
         m_cover = cover;
+        m_controls->setScrimEnabled(true);
     }
     m_controls->setTrackInfo(m_title, m_artist);
     update();
@@ -597,6 +601,7 @@ void MediaView::lookForFolderCover()
                         img = img.scaled(1600, 1600, Qt::KeepAspectRatio, Qt::SmoothTransformation);
                     }
                     m_cover = img;
+                    m_controls->setScrimEnabled(true);
                     return;
                 }
             }
@@ -655,6 +660,7 @@ void MediaView::setHasVideo(bool video)
     m_hasVideo = video;
     applyModuleSettings();
     m_controls->setMode(video ? MediaControls::Mode::Video : MediaControls::Mode::Audio);
+    m_controls->setScrimEnabled(video || !m_cover.isNull());
     m_surface->setVisible(video);
     layoutChildren();
     showControls();
@@ -671,7 +677,7 @@ void MediaView::applyModuleSettings()
     applyVolume(m_settings->moduleVolume(c));
     m_audio->setMuted(m_settings->moduleMuted(c));
     m_controls->setVolume(m_settings->moduleVolume(c),m_settings->moduleMuted(c));
-    m_controls->setLoop(m_settings->moduleLoopVideo());
+    m_controls->setLoop(m_hasVideo ? m_settings->moduleLoopVideo() : m_settings->moduleLoopAudio());
 }
 void MediaView::resetPresentation()
 {
@@ -712,11 +718,36 @@ void MediaView::resizeEvent(QResizeEvent *event)
 
 void MediaView::showControls()
 {
+    if (!m_pointerInside && !controlsEngaged()) { hideControls(); return; }
     m_controls->show();
+    Q_EMIT controlsVisibilityChanged(true);
     unsetCursor();
     scheduleHide();
 }
 
+bool MediaView::controlsEngaged() const
+{
+    return m_controlPressed || m_controls->seekSlider()->isDragging()
+        || m_controls->volumeSlider()->isDragging();
+}
+void MediaView::hideControls()
+{
+    m_hideTimer.stop();
+    m_controls->hide();
+    Q_EMIT controlsVisibilityChanged(false);
+    if (window()->isFullScreen()) setCursor(Qt::BlankCursor);
+}
+void MediaView::notifyUserActivity()
+{
+    m_pointerInside = true;
+    showControls();
+}
+void MediaView::pointerLeftWindow()
+{
+    m_pointerInside = false;
+    if (!m_controlPressed && !m_controls->seekSlider()->isDragging()
+        && !m_controls->volumeSlider()->isDragging()) hideControls();
+}
 void MediaView::scheduleHide()
 {
     if (m_hasVideo) {
@@ -753,12 +784,26 @@ void MediaView::paintEvent(QPaintEvent *)
         p.drawImage(r, m_cover);
     } else {
         p.fillRect(rect(), Style::windowBackground(this));
-        Style::paintAudioPlaceholder(p, QRectF(rect()).adjusted(4, 4, -4, -4), Style::isDark(this));
+        Style::paintAudioPlaceholder(p, QRectF(rect()), Style::isDark(this));
     }
 }
 
 bool MediaView::eventFilter(QObject *watched, QEvent *event)
 {
+    auto *widget = qobject_cast<QWidget*>(watched);
+    if (widget && (widget == m_controls || m_controls->isAncestorOf(widget))) {
+        if (event->type() == QEvent::MouseButtonPress) m_controlPressed = true;
+        if (event->type() == QEvent::MouseButtonRelease) {
+            m_controlPressed = false;
+            if (!m_pointerInside) {
+                QTimer::singleShot(0, this, [this] { if (!m_pointerInside) hideControls(); });
+            }
+        }
+        if (event->type() == QEvent::MouseMove || event->type() == QEvent::Enter
+            || event->type() == QEvent::MouseButtonPress || event->type() == QEvent::Wheel)
+            notifyUserActivity();
+        if (event->type() == QEvent::Leave || event->type() == QEvent::MouseButtonRelease) scheduleHide();
+    }
     // The surface covers the view. Deliver its pointer events explicitly;
     // QWidget propagation depends on the child's accepted state and is unreliable.
     if (watched == m_surface) {
@@ -775,7 +820,7 @@ bool MediaView::eventFilter(QObject *watched, QEvent *event)
         return event->isAccepted();
     }
     if ((watched == m_surface || watched == m_controls) && (event->type() == QEvent::MouseMove || event->type() == QEvent::Enter)) {
-        showControls();
+        notifyUserActivity();
     }
     return ContentView::eventFilter(watched, event);
 }
@@ -786,7 +831,14 @@ void MediaView::wheelEvent(QWheelEvent *event)
         event->ignore(); return;
     }
     const qreal delta = event->angleDelta().y() ? event->angleDelta().y() / 120.0 : event->pixelDelta().y() / 60.0;
-    m_surface->zoomAt(m_surface->zoom() * std::pow(2.0, delta / 4.0), event->position());
+    if (qFuzzyIsNull(delta)) { event->ignore(); return; }
+    const qreal factor = std::pow(2.0, delta / 4.0);
+    if (m_wheelResizesWindow && !window()->isFullScreen() && !window()->isMaximized()) {
+        const auto displayed = m_surface->imageRect().size();
+        if (!displayed.isEmpty()) Q_EMIT wheelDisplaySizeRequested(displayed * factor, event->position());
+    } else {
+        m_surface->zoomAt(m_surface->zoom() * factor, event->position());
+    }
     event->accept();
 }
 
@@ -806,7 +858,7 @@ void MediaView::mousePressEvent(QMouseEvent *event)
 
 void MediaView::mouseMoveEvent(QMouseEvent *event)
 {
-    showControls();
+    notifyUserActivity();
     if ((event->buttons() & Qt::LeftButton) && (event->position() - m_pressPos).manhattanLength() >= QApplication::startDragDistance()) m_dragged = true;
     if (m_panning) {
         m_surface->panBy(event->position() - m_lastPan);
@@ -846,9 +898,20 @@ void MediaView::mouseDoubleClickEvent(QMouseEvent *event)
     event->ignore();
 }
 
+void MediaView::enterEvent(QEnterEvent *event)
+{
+    notifyUserActivity();
+    ContentView::enterEvent(event);
+}
+void MediaView::hideEvent(QHideEvent *event)
+{
+    m_pointerInside = false;
+    hideControls();
+    ContentView::hideEvent(event);
+}
 void MediaView::leaveEvent(QEvent *event)
 {
-    scheduleHide();
+    pointerLeftWindow();
     ContentView::leaveEvent(event);
 }
 

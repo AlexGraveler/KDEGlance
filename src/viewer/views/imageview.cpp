@@ -753,6 +753,12 @@ void ImageView::enterEvent(QEnterEvent *event)
     ContentView::enterEvent(event);
 }
 
+void ImageView::hideEvent(QHideEvent *event)
+{
+    setButtonsVisible(false);
+    ContentView::hideEvent(event);
+}
+
 void ImageView::leaveEvent(QEvent *event)
 {
     setButtonsVisible(false);

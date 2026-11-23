@@ -41,7 +41,7 @@ add_library(kdeglance_viewer STATIC
     viewer/views/infoview.cpp
 )
 target_include_directories(kdeglance_viewer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/viewer)
-target_link_libraries(kdeglance_viewer PUBLIC kdeglance_core Qt6::Widgets Qt6::DBus Qt6::Multimedia Qt6::Core5Compat KF6::KIOCore KF6::KIOGui KF6::KIOWidgets KF6::Service PkgConfig::POPPLER_QT6)
+target_link_libraries(kdeglance_viewer PUBLIC kdeglance_core Qt6::Widgets Qt6::DBus Qt6::Multimedia Qt6::Core5Compat KF6::KIOCore KF6::KIOGui KF6::KIOWidgets KF6::Service KF6::SyntaxHighlighting PkgConfig::POPPLER_QT6)
 if(HAVE_QTSVG)
     target_link_libraries(kdeglance_viewer PUBLIC Qt6::Svg)
 endif()

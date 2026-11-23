@@ -99,11 +99,17 @@ public:
     QString artist() const;
     bool hasCoverArt() const;
     bool isLoaded() const;
+    void setWheelResizesWindow(bool enabled) { m_wheelResizesWindow = enabled; }
+    void notifyUserActivity();
+    void pointerLeftWindow();
+    bool controlsEngaged() const;
 
     static constexpr QSize AudioWindowSize{400, 400};
 
 Q_SIGNALS:
     void fullscreenRequested();
+    void controlsVisibilityChanged(bool visible);
+    void wheelDisplaySizeRequested(const QSizeF &size, const QPointF &anchor);
 
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -113,6 +119,8 @@ protected:
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void enterEvent(QEnterEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
     void leaveEvent(QEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
 
@@ -127,6 +135,7 @@ private:
     void applyModuleSettings();
     void toggleMute();
     void showControls();
+    void hideControls();
     void scheduleHide();
     void lookForFolderCover();
     void startMidi(const QString &path);
@@ -155,6 +164,9 @@ private:
     QImage m_cover;
     QSize m_videoSize;
 
+    bool m_wheelResizesWindow = false;
+    bool m_pointerInside = false;
+    bool m_controlPressed = false;
     bool m_dragged = false;
     bool m_panning = false;
     QPointF m_lastPan;

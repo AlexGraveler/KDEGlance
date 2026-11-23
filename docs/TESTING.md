@@ -1,4 +1,4 @@
-# Testing KDEGlance 2.0.4
+# Testing KDEGlance 2.1.0
 
 ## Build and mandatory checks
 
@@ -108,3 +108,19 @@ Screenshots use synthetic media and must not expose private documents.
 
 The source archive includes the intentional tiny AV1 regression fixture and
 synthetic FODT input, not generated media libraries or a developer's settings.
+
+## 2.1.0 coverage
+
+There are 18 CTest suites with the available Node.js and Dolphin integration.
+`presentationtest` covers Markdown memory, syntax on/off and palette changes,
+shared filename placement/font/transparency, control visibility, video wheel
+window/crop zoom and one-page settings. Media tests exercise the actual audio
+and video repeat buttons, end-of-media restart/stop and type switching.
+Settings tests check independent persistence/reset of repeat preferences.
+
+`documentformats` creates text and PDF without LibreOffice. `officeformats`
+returns the CTest skip code 77 only when the converter is missing; other tests
+continue. Actual conversion or decoding failures still fail their tests.
+The owner reports 18/18 manual checks passed on the accepted pre-release build.
+Final integration and package results are attached to the release as VALIDATION.md;
+synthetic Qt input is distinguished from physical desktop acceptance.

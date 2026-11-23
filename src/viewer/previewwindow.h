@@ -30,6 +30,7 @@ class RemoteResolver;
 class TextView;
 class PdfView;
 class OfficeView;
+class FilenameOverlay;
 
 /*
  * The preview window: a frameless, translucent top-level with rounded
@@ -137,6 +138,8 @@ private:
     void dispatchZoom();
     void tryCommitGeometry();
     void cancelGeometry();
+    void showFilename();
+    void layoutFilename();
 
     RemoteResolver *m_remote;
     Settings *m_settings;
@@ -149,6 +152,8 @@ private:
     ContentView *m_current = nullptr;
     CornerMask *m_cornerMask;
     Toast *m_toast;
+    FilenameOverlay *m_filename;
+    QTimer m_filenameTimer;
     std::array<QWidget *, 8> m_handles{};
     KWindowShadow *m_shadow = nullptr;
 
@@ -157,6 +162,7 @@ private:
     SizeCategory m_category = SizeCategory::Image;
     quint64 m_itemGeneration = 0;
     bool m_sessionActive = false;
+    bool m_pointerInside = false;
     bool m_revealPending = false;
     QTimer m_revealTimer;
     bool m_wasActive = false;

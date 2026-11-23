@@ -45,6 +45,8 @@ InfoView::InfoView(QWidget *parent)
     tf.setBold(true);
     tf.setPointSizeF(tf.pointSizeF() * 1.15);
     m_title->setFont(tf);
+    // The common preview overlay displays the filename for every module.
+    m_title->hide();
     for (QLabel *l : {m_title, m_details, m_message}) {
         l->setAlignment(Qt::AlignHCenter);
         l->setWordWrap(true);

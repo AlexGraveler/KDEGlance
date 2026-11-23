@@ -41,6 +41,8 @@ private:
             return w.isVisible();
         }));
         QTest::qWait(waitMs);
+        QEnterEvent enter(QPointF(20,20),QPointF(20,20),QPointF(w.mapToGlobal(QPoint(20,20))));
+        QApplication::sendEvent(&w,&enter);
         // Composite on a desktop-like background to show the rounded shape.
         const QImage window = w.grab().toImage();
         QImage canvas(window.size() + QSize(48, 48), QImage::Format_ARGB32_Premultiplied);
@@ -58,6 +60,7 @@ private Q_SLOTS:
         m_out = QDir::currentPath() + u"/kdeglance-screenshots"_s;
         QDir().mkpath(m_out);
         m_settings = std::make_unique<Settings>(path(u"settings.json"_s));
+        m_settings->setCloseOnFocusLoss(false);
         m_settings->setMuted(true); // Screenshot capture should be silent.
         // A landscape picture similar to the reference: gradient sky, sun, hills.
         QImage img(1200, 800, QImage::Format_RGB32);
@@ -77,6 +80,10 @@ private Q_SLOTS:
             p.drawPolygon(QPolygonF({QPointF(250, 800), QPointF(700, 330), QPointF(1200, 760), QPointF(1200, 800)}));
         }
         QVERIFY(img.save(path(u"landscape.jpg"_s)));
+        QFile code(path(u"example.cpp"_s));
+        QVERIFY(code.open(QIODevice::WriteOnly));
+        code.write("// Syntax highlighting follows the selected light or dark theme.\n#include <QString>\n#include <QVector>\n\nnamespace Preview {\nQString welcome(const QString &name)\n{\n    const int version = 210;\n    if (name.isEmpty()) {\n        return QStringLiteral(\"Welcome to KDEGlance\");\n    }\n    return QStringLiteral(\"Hello, %1!\").arg(name);\n}\n} // namespace Preview\n");
+        code.close();
         QFile txt(path(u"report.odt"_s));
         QVERIFY(txt.open(QIODevice::WriteOnly));
         txt.write("PK\x03\x04 fake");
@@ -119,6 +126,7 @@ private Q_SLOTS:
         broken.write("\x89PNG\r\n\x1a\nxx");
         broken.close();
         shoot(w, u"broken.png"_s, u"07-error"_s);
+        shoot(w, u"example.cpp"_s, u"09-syntax-highlighting"_s);
         SettingsDialog dialog(m_settings.get());
         dialog.show();
         QTest::qWait(200);

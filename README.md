@@ -1,4 +1,4 @@
-# KDEGlance 2.0.4
+# KDEGlance 2.1.0
 
 Quick Look-style file previews for **Dolphin on KDE Plasma 6**. Select a file and
 press **Space** to inspect it in a minimal, frameless window. Browse the folder
@@ -15,9 +15,9 @@ binary packages is recorded separately for each platform.
 [Release notes](RELEASE-NOTES.md) · [Installation](docs/INSTALL.md) ·
 [Validation](docs/RELEASE-VALIDATION.md)
 
-Version 2.0.2 fixes slow PDF vertical mouse-wheel scrolling: twice the speed of
-2.0.1 (54× relative to 2.0.0);
-Ctrl+wheel zoom, horizontal scrolling and other viewers retain their behavior.
+Version 2.1.0 adds syntax highlighting, Markdown mode memory, shared filenames,
+independent audio/video repeat, improved video zoom and a darker audio placeholder.
+It includes all fixes from 2.0.4 and earlier releases. See [release notes](RELEASE-NOTES.md).
 
 ## Features
 
@@ -39,7 +39,7 @@ Ctrl+wheel zoom, horizontal scrolling and other viewers retain their behavior.
 
 ## Screenshots
 
-Screenshots of KDEGlance 2.0 running on KDE Plasma.
+KDEGlance on KDE Plasma. Audio and Settings screenshots are updated for 2.1.0; other examples retain the published project screenshots.
 
 | Image preview | Audio with cover |
 |---|---|
@@ -53,9 +53,9 @@ Screenshots of KDEGlance 2.0 running on KDE Plasma.
 |---|---|
 | ![PDF preview](docs/screenshots/05-PDF.png) | ![Text preview](docs/screenshots/06-Text.png) |
 
-| Settings |
-|---|
-| ![KDEGlance settings](docs/screenshots/07-settings.png) |
+| Settings | Syntax highlighting |
+|---|---|
+| ![KDEGlance settings](docs/screenshots/07-settings.png) | ![Text syntax highlighting](docs/screenshots/08-syntax-highlighting.png) |
 
 ## Supported file types
 
@@ -82,9 +82,9 @@ archives, editing and media-library management are outside this release.
 ## Images and window geometry
 
 Without a remembered manual size, an image opens at 100% (one source pixel per
-device pixel), reduced only as needed to fit the work area. A remembered manual
-size is restored and the image fits inside it without distortion; mismatched
-proportions produce black bars.
+device pixel), reduced only as needed to fit the work area. Remembered manual bounds limit the next photo/video, which starts fitted to its own
+proportions within those bounds. A free manual resize of the current file can
+produce black bars; its stored bounds remain separate from temporary zoom.
 
 The mouse wheel changes the photo's temporary scale and lets the window follow
 its size up to the work-area limit. Beyond that limit the image continues zooming
@@ -117,11 +117,21 @@ again. It is not a second rotation button. Four rotation presses return to the
 original orientation. The wheel zooms video, and dragging a zoomed frame pans it.
 Side clicks navigate through the same mixed-file list used by other modules.
 
-Audio displays title, artist and an embedded or adjacent album cover when
-available, with a placeholder otherwise. Play/pause, seeking, volume/mute and file
-navigation are available in the compact player. Closing or switching previews
-stops the previous audio/video source. Audio and video have separate remembered
-window sizes and volume/mute preferences; Repeat is a video setting.
+Audio shows an embedded or adjacent cover when available, otherwise the new dark
+vector placeholder. Audio and video have separate Repeat buttons, volume/mute
+preferences and remembered window bounds. Repeat is controlled in the player;
+there is no redundant video-repeat checkbox in Settings. Closing or switching a
+preview stops its playback.
+
+The wheel resizes a video and its window together, preserving frame proportions.
+At the work-area limit the window stops growing and the image zooms inside it.
+Reverse zoom first removes the internal crop, then shrinks the window. Temporary
+wheel sizing never replaces manually remembered bounds. Fullscreen keeps its
+existing zoom behavior.
+
+Video controls hide on pointer leave or after three seconds of inactivity, also
+when paused. Pointer movement reveals them; interacting with a control prevents
+hiding during that interaction. Preview controls start hidden outside the window.
 
 Hardware video decoding is used when usable; a software fallback handles systems
 where hardware initialization or frame delivery fails. Actual codec support
@@ -132,7 +142,9 @@ remains dependent on Qt Multimedia/FFmpeg.
 Text is read-only, without a permanent toolbar or encoding menu. Encoding is
 chosen automatically using BOM/Unicode checks and legacy-encoding heuristics,
 including Windows-1251, KOI8-R, CP866 and Windows-1252. Ambiguous short legacy text
-can still be misidentified. Markdown can switch between source and rendered view.
+can still be misidentified. Markdown M switches source/rendered view; the last mode is shared across Markdown files and saved between restarts.
+KSyntaxHighlighting detects text languages and follows the system light/dark palette.
+The enabled-by-default setting can disable it for large files, removing existing colors.
 Wheel scrolling has the existing doubled speed, including pixel-delta input.
 Large text is loaded in chunks; scrolling near the end or Ctrl+PageDown requests more.
 
@@ -163,49 +175,47 @@ limited by LibreOffice; password-protected or damaged documents may fail.
 | Drag fitted photo | Move the window when there is nothing to pan |
 | Drag edge/corner without Alt | Free window proportions; photo fits without distortion |
 | Alt + drag edge/corner | Photo-proportional manual resize; other modules retain their existing ratio rule |
-| Image + / −, F or 0, 1 | Zoom, fit, 100% respectively |
 | Image double click | Toggle fit / 100% |
-| Image R; rotation / reflection icons | Counterclockwise rotation; view-only transforms |
 | PageUp / PageDown on multi-page image | Previous / next image page |
+| Audio/video Repeat button | Toggle repeat for the active media module |
 | Video play/pause button | Start or pause; Space remains preview close |
 | Seek bar click/drag; wheel over seek bar | Seek; one second per wheel step |
 | Speaker click; wheel over volume control | Mute; adjust volume |
-| Video Repeat button | Toggle repeat playback |
-| Video F / double click / fullscreen button | Toggle fullscreen |
-| Video R / rotation button; 0 | Rotate counterclockwise; reset video zoom |
 | Wheel over video; drag zoomed video | Zoom; pan; Alt-drag moves the window |
 | Wheel over text/PDF; document navigation keys | Scroll |
 | Drag text/PDF; Shift + drag | Move window; select text respectively |
 | Markdown M | Toggle rendered Markdown / source |
-| PDF/Office Ctrl+wheel or + / −; F or 0; R | Zoom; fit width; toggle text reflow |
 | Text Ctrl+PageDown | Load the next text chunk |
 | Focus outside preview | Close if focus-loss closing is enabled |
 
 System-wide KWin bindings can intercept modified mouse gestures before the viewer
 receives them. KDEGlance does not change global shortcuts or mouse bindings.
 
+## Shared filename and settings
+
+Every module uses the same background-free filename, with a 20% larger font.
+It appears on activity and hides automatically; duplicate media/card titles are
+not drawn. Settings offers **Do not show**, **Show at top** and **Show at bottom**.
+The choice is persistent, and bottom placement avoids the playback controls.
+
+Settings stays on one page and uses your Plasma palette, fonts and widget style.
+The syntax-highlighting option includes a large-file performance warning.
+
 ## Fedora 44 / Fedora 45
 
-KDEGlance 2.0.4 fixes image zoom after navigation and prevents a video-player
-crash during decoder error handling. The fixes were validated on Fedora.
-Download the existing Fedora 44 or Fedora 45 x86_64 RPM from the
-[2.0.4 release](https://github.com/AlexGraveler/KDEGlance/releases/tag/v2.0.4)
-and verify `SHA256SUMS` before installation:
+Fedora packaging shares the complete source with Arch/CachyOS, including the
+2.0.4 KWin and decoder fixes. Use the matching RPM **if listed among the 2.1.0
+release assets**, and verify SHA256SUMS. Source build instructions and platform
+validation are in [Fedora packaging](packaging/fedora/README.md).
 
 ```bash
-# Fedora 44; use the fc45 file on Fedora 45.
-sudo dnf install ./kdeglance-2.0.4-1.fc44.x86_64.rpm
+# Fedora 44; use fc45 on Fedora 45.
+sudo dnf install ./kdeglance-2.1.0-1.fc44.x86_64.rpm
 ```
 
-The published 2.0.3 Arch/CachyOS package and its build configuration remain
-unchanged; 2.0.4 supplies no new Arch package. See [release notes](RELEASE-NOTES.md)
-for validation results and known build-test limitations.
+LibreOffice is optional. Install `libreoffice-writer` only for Office previews.
 
-The binary RPM does not require LibreOffice. To enable Office previews separately,
-install `libreoffice-writer`. Reopen Dolphin after installation; no global
-shortcuts, MIME defaults or KWin settings need changing.
-
-## ## Installation on Arch Linux / CachyOS
+## Installation on Arch Linux / CachyOS
 
 KDEGlance supports Arch Linux, CachyOS and EndeavourOS.
 
@@ -217,7 +227,7 @@ KDEGlance supports Arch Linux, CachyOS and EndeavourOS.
 sudo pacman -S --needed base-devel git
 git clone https://github.com/AlexGraveler/KDEGlance.git
 cd KDEGlance/packaging/arch
-makepkg -si --nocheck
+makepkg -si
 ```
 
 This installs KDEGlance without requiring LibreOffice. Office document previews will display a message explaining that LibreOffice is needed.
@@ -233,7 +243,7 @@ makepkg -si
 
 This enables previews of supported DOC, DOCX, ODT and other Office documents.
 
-The standard build runs the full test suite, which currently requires LibreOffice. The `--nocheck` option skips package tests and their test-only dependencies.
+The standard build runs the tests without LibreOffice. Only Office conversion tests skip when the optional converter is absent; the remaining tests still run. Do not use --nocheck for release validation.
 
 ### After installation
 
@@ -294,6 +304,6 @@ files; it preserves your settings. No global KDE settings are changed.
 
 See [architecture](docs/ARCHITECTURE.md), [testing](docs/TESTING.md),
 [manual acceptance](docs/MANUAL-ACCEPTANCE.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
-License: **GPL-3.0-or-later**; see [COPYING](COPYING) and [LICENSE](LICENSE). Qt/KDE/FFmpeg/LibreOffice are system dependencies,
+License: **GPL-3.0-or-later**; see [COPYING](COPYING) and [LICENSE](LICENSE). Qt/KDE/FFmpeg are system dependencies and LibreOffice is an optional converter,
 not bundled with the release package. KDEGlance is an independent project, not an
 official KDE application.

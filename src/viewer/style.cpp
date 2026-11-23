@@ -220,62 +220,53 @@ void paintControlsScrim(QPainter &painter, const QRectF &rect)
     painter.fillRect(rect, g);
 }
 
-void paintAudioPlaceholder(QPainter &painter, const QRectF &rect, bool dark)
+void paintAudioPlaceholder(QPainter& painter, const QRectF& rect, bool dark)
 {
+    Q_UNUSED(dark)
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing);
-    const qreal side = std::min(rect.width(), rect.height());
-    QRectF tile(0, 0, side, side);
-    tile.moveCenter(rect.center());
-    const qreal radius = side * 0.16;
-
-    QLinearGradient bg(tile.topLeft(), tile.bottomRight());
-    if (dark) {
-        bg.setColorAt(0.0, QColor(0x3b, 0x4a, 0x5e));
-        bg.setColorAt(0.55, QColor(0x2e, 0x46, 0x55));
-        bg.setColorAt(1.0, QColor(0x4a, 0x3d, 0x55));
-    } else {
-        bg.setColorAt(0.0, QColor(0xe4, 0xec, 0xf4));
-        bg.setColorAt(0.55, QColor(0xb4, 0xd2, 0xdc));
-        bg.setColorAt(1.0, QColor(0xdc, 0xc8, 0xd8));
-    }
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(bg);
-    painter.drawRoundedRect(tile, radius, radius);
-
-    // Soft highlight.
-    QRadialGradient glow(tile.topLeft() + QPointF(side * 0.25, side * 0.2), side * 0.7);
-    glow.setColorAt(0.0, QColor(255, 255, 255, dark ? 40 : 120));
-    glow.setColorAt(1.0, QColor(255, 255, 255, 0));
-    painter.setBrush(glow);
-    painter.drawRoundedRect(tile, radius, radius);
-
-    painter.setBrush(Qt::NoBrush);
-    painter.setPen(QPen(QColor(255, 255, 255, dark ? 60 : 170), std::max<qreal>(2.0, side * 0.012)));
-    painter.drawRoundedRect(tile.adjusted(side * 0.012, side * 0.012, -side * 0.012, -side * 0.012), radius, radius);
-
-    // Beamed eighth notes.
-    const qreal u = side / 100.0;
-    const QPointF o = tile.topLeft();
+    painter.translate(rect.topLeft());
+    const qreal width = rect.width(), height = rect.height();
+    QLinearGradient bg(0, 0, width, height);
+    bg.setColorAt(0, QColor("#243d4d"));
+    bg.setColorAt(1, QColor("#385966"));
+    painter.fillRect(QRectF(0, 0, width, height), bg);
+    QRadialGradient glow(QPointF(width * .25, height * .18), std::max(width, height) * .95);
+    glow.setColorAt(0, QColor(255, 255, 255, 35));
+    glow.setColorAt(1, Qt::transparent);
+    painter.fillRect(QRectF(0, 0, width, height), glow);
+    QLinearGradient glass(0, 0, width, height);
+    glass.setColorAt(0, QColor(255, 255, 255, 16));
+    glass.setColorAt(.55, QColor(255, 255, 255, 2));
+    glass.setColorAt(1, QColor(255, 255, 255, 16));
+    painter.fillRect(QRectF(0, 0, width, height), glass);
+    QRadialGradient frost(QPointF(width * .9, height * .8), width * .7);
+    frost.setColorAt(0, QColor(111, 199, 201, 24));
+    frost.setColorAt(1, Qt::transparent);
+    painter.fillRect(QRectF(0, 0, width, height), frost);
+    const qreal s = std::min(width, height) * .24;
+    painter.translate(width / 2., height / 2.);
+    painter.scale(s / 64., s / 64.);
     QPainterPath note;
-    note.addEllipse(QRectF(o + QPointF(27 * u, 61 * u), QSizeF(19 * u, 16 * u)));
-    note.addEllipse(QRectF(o + QPointF(58 * u, 54 * u), QSizeF(19 * u, 16 * u)));
-    note.addRoundedRect(QRectF(o + QPointF(40 * u, 30 * u), QSizeF(6 * u, 39 * u)), 2 * u, 2 * u);
-    note.addRoundedRect(QRectF(o + QPointF(71 * u, 23 * u), QSizeF(6 * u, 39 * u)), 2 * u, 2 * u);
-    QPainterPath beam;
-    beam.moveTo(o + QPointF(40 * u, 30 * u));
-    beam.lineTo(o + QPointF(77 * u, 21 * u));
-    beam.lineTo(o + QPointF(77 * u, 31 * u));
-    beam.lineTo(o + QPointF(40 * u, 40 * u));
-    beam.closeSubpath();
-    note = note.united(beam);
-    painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(255, 255, 255, dark ? 210 : 235));
+    note.moveTo(-4, 19);
+    note.lineTo(-4, -24);
+    note.lineTo(26, -30);
+    note.lineTo(26, 13);
+    QLinearGradient ink(-20, -30, 30, 25);
+    ink.setColorAt(0, QColor("#ffffff"));
+    ink.setColorAt(.4, QColor("#c6dce7"));
+    ink.setColorAt(1, QColor("#9bc7d6"));
+    painter.setPen(QPen(QBrush(ink), 2.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.setBrush(Qt::NoBrush);
     painter.drawPath(note);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(ink);
+    painter.drawEllipse(QPointF(-10, 20), 7, 4.8);
+    painter.drawEllipse(QPointF(20, 14), 7, 4.8);
     painter.restore();
 }
 
-void paintSpinner(QPainter &painter, const QPointF &center, qreal radius, qreal phase, const QColor &color)
+void paintSpinner(QPainter& painter, const QPointF& center, qreal radius, qreal phase, const QColor& color)
 {
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing);

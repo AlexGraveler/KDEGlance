@@ -2,7 +2,7 @@
 # Build from the pinned upstream release: makepkg -si
 
 pkgname=kdeglance
-pkgver=2.0.3
+pkgver=2.1.0
 pkgrel=1
 url="https://github.com/AlexGraveler/KDEGlance"
 pkgdesc="File previews for Dolphin: images, RAW, audio, video and documents"
@@ -17,6 +17,7 @@ depends=(
   'kio'
   'kcoreaddons'
   'kjobwidgets'            # directly linked KIO application-launch UI
+  'syntax-highlighting'     # automatic text syntax highlighting (KF6)
   'kservice'                # KDE MIME application associations
   'kwindowsystem'
   'kimageformats'           # PSD, PCX, HDR, TGA-RLE, AVIF/HEIF/JXL/EXR/JP2 (with their libraries)
@@ -45,11 +46,11 @@ optdepends=(
   'soundfont-fluid: General MIDI SoundFont for fluidsynth'
 )
 makedepends=('cmake' 'ninja' 'pkgconf')
-# Upstream Office tests generate/convert real documents; runtime stays optional.
-checkdepends=('libreoffice' 'dbus' 'imagemagick' 'python' 'qpdf' 'desktop-file-utils' 'nodejs')
+# Only Office conversion tests skip when the optional converter is absent.
+checkdepends=('dbus' 'imagemagick' 'python' 'qpdf' 'desktop-file-utils' 'nodejs')
 install=kdeglance.install
 source=("${url}/releases/download/v${pkgver}/kdeglance-${pkgver}.tar.gz")
-sha256sums=('0dd06a06916cd233d31fce10bc7aa3379e22157a98907cd06238789791aa22e1')
+sha256sums=('9d843819cd64a692e891dd45a52c3f173f1aed3b4db968056cf2a2a8155d482e')
 
 prepare() {
   # Fail on an unexpected archive layout/version instead of building another ref.

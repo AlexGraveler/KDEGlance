@@ -67,9 +67,11 @@ public:
     double moduleVolume(SizeCategory category) const;
     bool moduleMuted(SizeCategory category) const;
     bool moduleLoopVideo() const;
+    bool moduleLoopAudio() const;
     void setModuleVolume(SizeCategory category, double value);
     void setModuleMuted(SizeCategory category, bool value);
     void setModuleLoopVideo(bool value);
+    void setModuleLoopAudio(bool value);
 
     // --- general -----------------------------------------------------------
     bool syncSelection() const;
@@ -86,6 +88,14 @@ public:
     // so that the first preview opens instantly.
     bool prestartService() const;
     void setPrestartService(bool enabled);
+
+    enum class FilenamePosition { Hidden, Top, Bottom };
+    FilenamePosition filenamePosition() const;
+    void setFilenamePosition(FilenamePosition position);
+    bool markdownRendered() const;
+    void setMarkdownRendered(bool enabled);
+    bool syntaxHighlighting() const;
+    void setSyntaxHighlighting(bool enabled);
 
     // --- window --------------------------------------------------------------
     std::optional<QSize> savedSize(SizeCategory category) const;

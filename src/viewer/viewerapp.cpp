@@ -369,7 +369,7 @@ QString ViewerApp::Status()
         auto *mv = m_window->mediaView();
         o[u"volume"_s]=m_settings.moduleVolume(mv->sizeCategory());
         o[u"muted"_s]=m_settings.moduleMuted(mv->sizeCategory());
-        o[u"loop"_s]=m_settings.moduleLoopVideo();
+        o[u"loop"_s]=mv->hasVideo() ? m_settings.moduleLoopVideo() : m_settings.moduleLoopAudio();
         o[u"hasVideo"_s] = mv->hasVideo();
         o[u"hasFrame"_s] = mv->surface()->hasFrame();
         o[u"videoFrames"_s] = mv->surface()->framesShown();

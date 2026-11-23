@@ -19,7 +19,7 @@ for file in ('CMakeLists.txt','config-kdeglance.h.in','COPYING','LICENSE','READM
  'RELEASE-NOTES.md','CONTRIBUTING.md','VERSION','.gitignore',
  'docs/ARCHITECTURE.md','docs/FORMATS.md','docs/TESTING.md','docs/INSTALL.md',
  'docs/RELEASE-VALIDATION.md','docs/MANUAL-ACCEPTANCE.md',
- 'packaging/arch/kdeglance.install',
+ 'packaging/arch/kdeglance.install','packaging/arch/README.md',
  'packaging/arch/make-source-tarball.sh','packaging/arch/test-in-clean-chroot.sh',
  'packaging/arch/test-package-lifecycle.sh',
  'packaging/fedora/kdeglance.spec','packaging/fedora/README.md',

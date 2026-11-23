@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 KDEGlance contributors
 cmake_minimum_required(VERSION 3.22)
 
-project(kdeglance VERSION 2.0.4 LANGUAGES CXX)
+project(kdeglance VERSION 2.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -62,6 +62,7 @@ pkg_check_modules(POPPLER_QT6 REQUIRED IMPORTED_TARGET poppler-qt6)
 
 find_package(KF6KIO ${KF_MIN_VERSION} CONFIG REQUIRED)
 find_package(KF6Service ${KF_MIN_VERSION} CONFIG REQUIRED)
+find_package(KF6SyntaxHighlighting ${KF_MIN_VERSION} CONFIG REQUIRED)
 if(BUILD_DOLPHIN_INTEGRATION)
     find_package(KF6CoreAddons ${KF_MIN_VERSION} CONFIG REQUIRED)
 endif()

@@ -77,8 +77,11 @@ if(BUILD_DESKTOP_TEST_ADAPTER)
 endif()
 
 kdeglance_test(documenttest SOURCES viewer/documenttest.cpp LIBS kdeglance_viewer)
-add_test(NAME documentformats COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/documents/run-formats.sh $<TARGET_FILE:kdeglance> ${CMAKE_CURRENT_BINARY_DIR}/document-samples)
+add_test(NAME documentformats COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/documents/run-formats.sh $<TARGET_FILE:kdeglance> ${CMAKE_CURRENT_BINARY_DIR}/document-core-samples core)
 set_tests_properties(documentformats PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;KDEGLANCE_LANG=en" TIMEOUT 600)
+# Office conversion is optional; a missing converter skips only this suite.
+add_test(NAME officeformats COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/documents/run-formats.sh $<TARGET_FILE:kdeglance> ${CMAKE_CURRENT_BINARY_DIR}/office-samples office)
+set_tests_properties(officeformats PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;KDEGLANCE_LANG=en" TIMEOUT 600 SKIP_RETURN_CODE 77)
 find_package(Qt6 REQUIRED COMPONENTS Network)
 kdeglance_test(remoteresolvertest DBUS SOURCES viewer/remoteresolvertest.cpp LIBS kdeglance_viewer Qt6::Network)
 
@@ -88,3 +91,5 @@ add_executable(residentopenprobe viewer/residentopenprobe.cpp)
 target_link_libraries(residentopenprobe PRIVATE kdeglance_viewer Qt6::Test)
 add_dependencies(defaultopentest residentopenprobe)
 target_compile_definitions(defaultopentest PRIVATE TEST_RESIDENT_PROBE="$<TARGET_FILE:residentopenprobe>")
+
+kdeglance_test(presentationtest SOURCES viewer/presentationtest.cpp LIBS kdeglance_viewer)

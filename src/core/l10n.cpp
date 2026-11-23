@@ -13,6 +13,12 @@ namespace
 const QHash<QString, QString> &russian()
 {
     static const QHash<QString, QString> table{
+        {QStringLiteral("Filename display"), QStringLiteral("Отображение имени файла")},
+        {QStringLiteral("Do not show"), QStringLiteral("Не показывать")},
+        {QStringLiteral("Show at top"), QStringLiteral("Показывать сверху")},
+        {QStringLiteral("Show at bottom"), QStringLiteral("Показывать снизу")},
+        {QStringLiteral("Enable syntax highlighting in text files"), QStringLiteral("Включить подсветку синтаксиса в текстовых файлах")},
+        {QStringLiteral("Syntax highlighting may slow down opening and viewing large files."), QStringLiteral("Подсветка синтаксиса может замедлять открытие и просмотр больших файлов.")},
         {QStringLiteral("Cannot open an empty or invalid URL"), QStringLiteral("Невозможно открыть пустой или неверный адрес")},
         {QStringLiteral("KDEGlance is the default application for this file. Choose another application in Dolphin."),
          QStringLiteral("Для этого файла приложением по умолчанию назначен KDEGlance. Выберите другое приложение в Dolphin.")},

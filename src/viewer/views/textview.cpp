@@ -2,6 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "textview.h"
 #include <QApplication>
+#include <KSyntaxHighlighting/Repository>
+#include <KSyntaxHighlighting/SyntaxHighlighter>
+#include <KSyntaxHighlighting/Definition>
+#include <KSyntaxHighlighting/Theme>
 #include <QKeyEvent>
 #include <QScrollBar>
 #include <QWheelEvent>
@@ -52,8 +56,10 @@ private:
 };
 TextView::TextView(QWidget* parent)
     : ContentView(parent)
+    , m_repository(std::make_unique<KSyntaxHighlighting::Repository>())
     , m_editor(new DoubleScroll<QPlainTextEdit>(this))
     , m_markdown(new DoubleScroll<QTextBrowser>(this))
+    , m_highlighter(new KSyntaxHighlighting::SyntaxHighlighter(m_editor->document()))
 {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -94,10 +100,11 @@ TextView::TextView(QWidget* parent)
             m_appendTimer.stop();
             m_pending.clear();
             m_reading = false;
+            applyMarkdownMode();
         }
     });
 }
-TextView::~TextView() { unload(); }
+TextView::~TextView() { unload(); delete m_highlighter; }
 bool TextView::renderedMarkdown() const { return !m_markdown->isHidden(); }
 void TextView::toggleMarkdown()
 {
@@ -106,6 +113,51 @@ void TextView::toggleMarkdown()
     const bool render=m_markdown->isHidden();
     if (render) m_markdown->setMarkdown(m_editor->toPlainText());
     m_markdown->setVisible(render); m_editor->setVisible(!render);
+    if (m_settings) {
+        m_settings->setMarkdownRendered(render);
+        Q_EMIT presentationSettingsChanged();
+    }
+    updateHighlighting();
+}
+void TextView::setSettings(Settings* settings)
+{
+    m_settings = settings;
+    applySettings();
+}
+void TextView::applyMarkdownMode()
+{
+    const auto suffix = QFileInfo(m_item.path).suffix().toLower();
+    const bool render = (suffix == QStringLiteral("md") || suffix == QStringLiteral("markdown"))
+        && m_settings && m_settings->markdownRendered();
+    if (render) m_markdown->setMarkdown(m_editor->toPlainText());
+    m_markdown->setVisible(render);
+    m_editor->setVisible(!render);
+    updateHighlighting();
+}
+void TextView::applySettings() { applyMarkdownMode(); }
+void TextView::updateHighlighting()
+{
+    auto definition = m_repository->definitionForFileName(m_item.path);
+    if (!definition.isValid() && m_item.type.mimeType.isValid())
+        definition = m_repository->definitionForMimeType(m_item.type.mimeType.name());
+    if ((m_settings && !m_settings->syntaxHighlighting()) || renderedMarkdown() || !definition.isValid()) {
+        // Detaching also removes existing formats and avoids highlighter work
+        // altogether when the user chooses plain text.
+        m_highlighter->setDocument(nullptr);
+        m_highlighter->setDefinition({});
+        return;
+    }
+    const auto theme = m_repository->defaultTheme(palette().color(QPalette::Base).lightnessF() < 0.5
+        ? KSyntaxHighlighting::Repository::DarkTheme : KSyntaxHighlighting::Repository::LightTheme);
+    m_highlighter->setTheme(theme);
+    m_highlighter->setDefinition(definition);
+    m_highlighter->setDocument(m_editor->document());
+}
+void TextView::changeEvent(QEvent* event)
+{
+    ContentView::changeEvent(event);
+    if (event->type() == QEvent::PaletteChange || event->type() == QEvent::ApplicationPaletteChange)
+        updateHighlighting();
 }
 bool TextView::handleKey(QKeyEvent* event)
 {
@@ -130,6 +182,7 @@ void TextView::resetPresentation()
     m_markdown->hide(); m_editor->show();
     m_editor->verticalScrollBar()->setValue(0);
     m_editor->horizontalScrollBar()->setValue(0);
+    applySettings();
 }
 void TextView::unload()
 {
@@ -154,6 +207,7 @@ void TextView::load(const PreviewItem& item)
     m_item = item;
     m_session = std::make_shared<TextSession>();
     m_session->path = item.path;
+    applySettings();
     beginRead();
 }
 void TextView::loadMore()

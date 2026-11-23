@@ -3,5 +3,5 @@
 set -eu
 VIEWER="$1"
 WORK="$2"
-python3 "$(dirname "$0")/generate-samples.py" "$WORK"
+python3 "$(dirname "$0")/generate-samples.py" "$WORK" "${3:-all}"
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$VIEWER" --probe-formats "$WORK"
