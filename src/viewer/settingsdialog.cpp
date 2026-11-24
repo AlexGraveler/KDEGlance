@@ -7,6 +7,7 @@
 
 #include <QCheckBox>
 #include <QButtonGroup>
+#include <QComboBox>
 #include <QGroupBox>
 #include <QRadioButton>
 #include <QDialogButtonBox>
@@ -27,6 +28,7 @@ SettingsDialog::SettingsDialog(Settings *settings, QWidget *parent)
     : QDialog(parent)
     , m_settings(settings)
     , m_shortcut(new QKeySequenceEdit(this))
+    , m_fileNavigationKeys(new QComboBox(this))
     , m_sync(new QCheckBox(tr_("Select the previewed file in Dolphin"), this))
     , m_focusClose(new QCheckBox(tr_("Close the preview when it loses focus"), this))
     , m_prestart(new QCheckBox(tr_("Start KDEGlance in the background together with Dolphin (faster first preview)"), this))
@@ -49,6 +51,11 @@ SettingsDialog::SettingsDialog(Settings *settings, QWidget *parent)
     defaultKey->setText(tr_("Default (Space)"));
     shortcutRow->addWidget(defaultKey);
     form->addRow(tr_("Quick Look key in Dolphin:"), shortcutRow);
+
+    m_fileNavigationKeys->addItem(tr_("Left / Right"), int(Settings::FileNavigationKeys::LeftRight));
+    m_fileNavigationKeys->addItem(tr_("Up / Down"), int(Settings::FileNavigationKeys::UpDown));
+    connect(m_fileNavigationKeys, &QComboBox::activated, this, &SettingsDialog::commit);
+    form->addRow(tr_("File navigation keys:"), m_fileNavigationKeys);
     layout->addLayout(form);
 
     for (QCheckBox *box : {m_sync, m_focusClose, m_prestart, m_autoplay, m_hwdec, m_rawEmbedded}) {
@@ -122,6 +129,7 @@ void SettingsDialog::load()
 {
     m_loading = true;
     m_shortcut->setKeySequence(m_settings->shortcut());
+    m_fileNavigationKeys->setCurrentIndex(m_fileNavigationKeys->findData(int(m_settings->fileNavigationKeys())));
     m_sync->setChecked(m_settings->syncSelection());
     m_focusClose->setChecked(m_settings->closeOnFocusLoss());
     m_prestart->setChecked(m_settings->prestartService());
@@ -151,6 +159,7 @@ void SettingsDialog::commit()
         seq = QKeySequence(Qt::Key_Space);
     }
     m_settings->setShortcut(seq);
+    m_settings->setFileNavigationKeys(Settings::FileNavigationKeys(m_fileNavigationKeys->currentData().toInt()));
     m_settings->setSyncSelection(m_sync->isChecked());
     m_settings->setCloseOnFocusLoss(m_focusClose->isChecked());
     m_settings->setPrestartService(m_prestart->isChecked());

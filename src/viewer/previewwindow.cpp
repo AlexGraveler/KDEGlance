@@ -1082,6 +1082,18 @@ void PreviewWindow::paintEvent(QPaintEvent *)
     p.drawRoundedRect(QRectF(rect()), radius, radius);
 }
 
+int PreviewWindow::fileNavigationDelta(int key) const
+{
+    const bool vertical = m_settings->fileNavigationKeys() == Settings::FileNavigationKeys::UpDown;
+    if (key == (vertical ? Qt::Key_Up : Qt::Key_Left)) {
+        return -1;
+    }
+    if (key == (vertical ? Qt::Key_Down : Qt::Key_Right)) {
+        return 1;
+    }
+    return 0;
+}
+
 void PreviewWindow::keyPressEvent(QKeyEvent *event)
 {
     const int key = event->key();
@@ -1108,8 +1120,8 @@ void PreviewWindow::keyPressEvent(QKeyEvent *event)
         event->accept();
         return;
     }
-    if (key == Qt::Key_Left || key == Qt::Key_Right) {
-        Q_EMIT navigateRequested(key == Qt::Key_Left ? -1 : 1);
+    if (const int delta = fileNavigationDelta(key); delta != 0) {
+        Q_EMIT navigateRequested(delta);
         event->accept();
         return;
     }
@@ -1320,8 +1332,11 @@ bool PreviewWindow::eventFilter(QObject *watched, QEvent *event)
             }
         }
         if (m_current == m_textView || m_current == m_pdfView || m_current == m_officeView) {
-            if (key->modifiers()==Qt::NoModifier && (key->key()==Qt::Key_Space || key->key()==Qt::Key_Escape
-                || key->key()==Qt::Key_Left || key->key()==Qt::Key_Right)) { keyPressEvent(key); return true; }
+            if (key->modifiers() == Qt::NoModifier
+                && (key->key() == Qt::Key_Space || key->key() == Qt::Key_Escape || fileNavigationDelta(key->key()) != 0)) {
+                keyPressEvent(key);
+                return true;
+            }
             if (m_current->handleKey(key)) return true;
             // No permanent toolbar: retain normal keyboard document scrolling.
             if (key->modifiers()==Qt::NoModifier) {

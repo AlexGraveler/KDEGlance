@@ -81,6 +81,10 @@ public:
     QKeySequence shortcut() const;
     void setShortcut(const QKeySequence &sequence);
 
+    enum class FileNavigationKeys { LeftRight, UpDown };
+    FileNavigationKeys fileNavigationKeys() const;
+    void setFileNavigationKeys(FileNavigationKeys keys);
+
     bool closeOnFocusLoss() const;
     void setCloseOnFocusLoss(bool enabled);
 

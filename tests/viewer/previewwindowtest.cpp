@@ -11,6 +11,8 @@
 
 #include "../testutils.h"
 
+#include <QPlainTextEdit>
+#include <QScrollBar>
 #include <QSignalSpy>
 #include <QScreen>
 #include <QTemporaryDir>
@@ -489,6 +491,46 @@ private Q_SLOTS:
         QCOMPARE(nav.at(0).first().toInt(), 1);
         QCOMPARE(nav.at(1).first().toInt(), -1);
         QVERIFY(m_window->isVisible()); // window stays, only content changes
+    }
+
+    void verticalArrowsBrowseAndPageKeysStillScroll()
+    {
+        QFile text(path(u"long-notes.txt"_s));
+        QVERIFY(text.open(QIODevice::WriteOnly));
+        QVERIFY(text.write(QByteArray("A line of text\n").repeated(300)) > 0);
+        text.close();
+        open(u"long-notes.txt"_s);
+        auto *editor = m_window->textView()->findChild<QPlainTextEdit *>(u"textEditor"_s);
+        QVERIFY(editor);
+        auto *scroll = editor->verticalScrollBar();
+        QTRY_VERIFY(scroll->maximum() > 0);
+        QSignalSpy nav(m_window.get(), &PreviewWindow::navigateRequested);
+
+        const int start = scroll->value();
+        QTest::keyClick(editor, Qt::Key_Down);
+        QVERIFY(scroll->value() > start);
+        QVERIFY(nav.isEmpty());
+
+        m_settings->setFileNavigationKeys(Settings::FileNavigationKeys::UpDown);
+        const int beforeNavigation = scroll->value();
+        QTest::keyClick(editor, Qt::Key_Down);
+        QTest::keyClick(editor, Qt::Key_Up);
+        QCOMPARE(nav.size(), 2);
+        QCOMPARE(nav.at(0).first().toInt(), 1);
+        QCOMPARE(nav.at(1).first().toInt(), -1);
+        QCOMPARE(scroll->value(), beforeNavigation);
+
+        QTest::keyClick(editor, Qt::Key_Left);
+        QTest::keyClick(editor, Qt::Key_Right);
+        QCOMPARE(nav.size(), 2);
+
+        const int beforePageDown = scroll->value();
+        QTest::keyClick(editor, Qt::Key_PageDown);
+        const int afterPageDown = scroll->value();
+        QVERIFY(afterPageDown > beforePageDown);
+        QTest::keyClick(editor, Qt::Key_PageUp);
+        QVERIFY(scroll->value() < afterPageDown);
+        QCOMPARE(nav.size(), 2);
     }
 
     void switchingKeepsWindow()
