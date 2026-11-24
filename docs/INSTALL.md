@@ -166,3 +166,19 @@ an isolated temporary Pacman root without removing the running desktop package.
 
 See [the Fedora recipe and installation instructions](../packaging/fedora/README.md)
 and [current binary availability](../RELEASE-NOTES.md).
+
+## Debian and Ubuntu
+
+There is no published binary package. Build a local `.deb` from the working
+tree with the recipe in [`packaging/debian`](../packaging/debian/README.md):
+
+```bash
+# Install the Build-Depends recorded in packaging/debian/control first.
+packaging/debian/build-deb.sh
+sudo apt install ./packaging/debian/build/kdeglance_*.deb
+```
+
+The recipe builds and its CTest suite passes on Ubuntu 26.04 LTS; manual
+desktop acceptance there has not been recorded yet. Rebuild it for each
+distribution release: the Dolphin plugins must be compiled against the Qt
+version that will load them.

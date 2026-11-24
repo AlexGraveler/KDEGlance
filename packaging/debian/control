@@ -1,0 +1,59 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Debian/Ubuntu source and binary package metadata.
+Source: kdeglance
+Section: kde
+Priority: optional
+Maintainer: KDEGlance contributors <noreply@github.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               extra-cmake-modules,
+               ninja-build,
+               pkgconf,
+               qt6-base-dev,
+               qt6-multimedia-dev,
+               qt6-svg-dev,
+               qt6-5compat-dev,
+               libkf6coreaddons-dev,
+               libkf6kio-dev,
+               libkf6service-dev,
+               libkf6windowsystem-dev,
+               libpoppler-qt6-dev,
+               libraw-dev,
+               dbus-daemon,
+               desktop-file-utils,
+               ffmpeg,
+               imagemagick,
+               libreoffice-writer | libreoffice-core,
+               python3,
+               qpdf
+Rules-Requires-Root: no
+Standards-Version: 4.7.0
+Homepage: https://github.com/AlexGraveler/KDEGlance
+
+Package: kdeglance
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         dolphin,
+         hicolor-icon-theme,
+         kimageformat-plugins,
+         kio-fuse,
+         qt6-wayland
+Recommends: fluid-soundfont-gm,
+            fluidsynth,
+            kio-extras,
+            libavif16,
+            libheif-plugin-libde265,
+            libjxl0.11,
+            libopenexr-3-1-30,
+            libopenjp2-7,
+            libreoffice-core
+Description: Quick Look-style file previews for Dolphin
+ Select a file in Dolphin and press Space to preview images, camera RAW
+ photos, animations, video, audio, text, PDF and office documents in a
+ light floating window. Arrow keys step through the folder and Dolphin's
+ selection follows.
+ .
+ Includes the Dolphin Space hook, the "KDEGlance: Quick Look" context-menu
+ action, and an on-demand D-Bus activated viewer service. Office document
+ previews use LibreOffice when it is installed.

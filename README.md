@@ -7,9 +7,10 @@ application.
 
 KDEGlance 2.0.0 is the C++20 / Qt 6 / KDE Frameworks 6 release of the project.
 The supported and tested desktop is **CachyOS, Plasma 6, Wayland and KWin**.
-Arch Linux with equivalent dependencies and Fedora 44 KDE Plasma share one
-codebase. Fedora RPM build instructions are included; availability of tested
-binary packages is recorded separately for each platform.
+Arch Linux with equivalent dependencies, Fedora 44 KDE Plasma and Ubuntu 26.04
+share one codebase. Fedora RPM and Debian/Ubuntu DEB build instructions are
+included; availability of tested binary packages is recorded separately for each
+platform.
 
 [Downloads and releases](https://github.com/AlexGraveler/KDEGlance/releases) ·
 [Release notes](RELEASE-NOTES.md) · [Installation](docs/INSTALL.md) ·

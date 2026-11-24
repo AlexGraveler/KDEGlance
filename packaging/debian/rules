@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/buildflags.mk
+
+%:
+	dh $@ --buildsystem=cmake+ninja
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		-DBUILD_DOLPHIN_INTEGRATION=ON \
+		-DWITH_LIBRAW=ON \
+		-DWITH_KWINDOWSYSTEM=ON \
+		-DBUILD_TESTING=ON
+
+# Every test runs headless; an X or Wayland display is never required.
+override_dh_auto_test:
+	QT_QPA_PLATFORM=offscreen dh_auto_test
+
+# /usr/share/licenses is an Arch/Fedora convention. Debian keeps the license
+# notice in debian/copyright and /usr/share/doc/kdeglance.
+override_dh_auto_install:
+	dh_auto_install
+	rm -rf debian/kdeglance/usr/share/licenses
+
+# The unit has no [Install] section: it is D-Bus activated on demand, so it
+# must never be enabled or started by the package.
+override_dh_installsystemduser:
+	dh_installsystemduser --no-enable

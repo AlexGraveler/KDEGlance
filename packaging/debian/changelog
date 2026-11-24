@@ -1,0 +1,10 @@
+kdeglance (2.0.4-1) resolute; urgency=medium
+
+  * Initial Debian/Ubuntu packaging.
+  * Built from the 2.0.4 source tree with Dolphin integration, libraw and
+    KWindowSystem support enabled.
+  * The Dolphin plugins install into the multiarch Qt plugin directory
+    (/usr/lib/<triplet>/qt6/plugins) so they are found without QT_PLUGIN_PATH.
+  * The viewer service is installed as a D-Bus activated systemd user unit.
+
+ -- KDEGlance contributors <noreply@github.com>  Wed, 18 Nov 2026 17:06:45 +1100
