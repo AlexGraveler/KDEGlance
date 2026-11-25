@@ -140,6 +140,7 @@ private:
     void cancelGeometry();
     void showFilename();
     void layoutFilename();
+    int fileNavigationDelta(int key) const;
 
     RemoteResolver *m_remote;
     Settings *m_settings;

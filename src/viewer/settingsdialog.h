@@ -6,6 +6,7 @@
 
 class QCheckBox;
 class QButtonGroup;
+class QComboBox;
 class QKeySequenceEdit;
 class QLabel;
 
@@ -30,6 +31,7 @@ private:
 
     Settings *m_settings;
     QKeySequenceEdit *m_shortcut;
+    QComboBox *m_fileNavigationKeys;
     QCheckBox *m_sync;
     QCheckBox *m_focusClose;
     QCheckBox *m_prestart;

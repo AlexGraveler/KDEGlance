@@ -165,7 +165,7 @@ limited by LibreOffice; password-protected or damaged documents may fail.
 | Space in Dolphin's file view | Open/toggle preview; text-entry fields keep normal Space behavior |
 | Space / Escape in preview | Close; Escape first leaves fullscreen video |
 | Enter / keypad Enter | Close preview and open the original file/URL in its default application |
-| Left / Right | Previous / next file; synchronize the source Dolphin selection when enabled |
+| Left / Right (default), or Up / Down | Previous / next file. Choose the arrow pair under **File navigation keys** in Settings. Dolphin’s selection follows the preview when syncing is enabled. |
 | Leftmost / rightmost 20% of image, cover or video content | Previous / next file, outside playback controls |
 | Center content click | Close preview |
 | Single middle click / double middle click | Close / reset only the active module |
@@ -182,7 +182,7 @@ limited by LibreOffice; password-protected or damaged documents may fail.
 | Seek bar click/drag; wheel over seek bar | Seek; one second per wheel step |
 | Speaker click; wheel over volume control | Mute; adjust volume |
 | Wheel over video; drag zoomed video | Zoom; pan; Alt-drag moves the window |
-| Wheel over text/PDF; document navigation keys | Scroll |
+| Wheel, Page Up / Page Down, Home / End over documents | Scroll. Up / Down also scroll when file navigation uses Left / Right. |
 | Drag text/PDF; Shift + drag | Move window; select text respectively |
 | Markdown M | Toggle rendered Markdown / source |
 | Text Ctrl+PageDown | Load the next text chunk |

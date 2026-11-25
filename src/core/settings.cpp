@@ -102,6 +102,7 @@ QJsonObject Settings::defaults()
          QJsonObject{
              {u"syncSelection"_s, true},
              {u"shortcut"_s, u"Space"_s},
+             {u"fileNavigationKeys"_s, u"left-right"_s},
              {u"closeOnFocusLoss"_s, true},
              {u"prestartService"_s, true},
              {u"filenamePosition"_s, u"top"_s},
@@ -334,6 +335,18 @@ void Settings::setShortcut(const QKeySequence &sequence)
     }
     // Only the first chord is meaningful for a file-manager hotkey.
     setValue(General, u"shortcut"_s, QKeySequence(sequence[0]).toString(QKeySequence::PortableText));
+}
+
+Settings::FileNavigationKeys Settings::fileNavigationKeys() const
+{
+    return value(General, u"fileNavigationKeys"_s).toString() == u"up-down"_s
+        ? FileNavigationKeys::UpDown
+        : FileNavigationKeys::LeftRight;
+}
+
+void Settings::setFileNavigationKeys(FileNavigationKeys keys)
+{
+    setValue(General, u"fileNavigationKeys"_s, keys == FileNavigationKeys::UpDown ? u"up-down"_s : u"left-right"_s);
 }
 
 bool Settings::closeOnFocusLoss() const

@@ -43,6 +43,7 @@ private Q_SLOTS:
         QCOMPARE(s.load(), Settings::LoadStatus::Missing);
         QVERIFY(s.syncSelection());
         QCOMPARE(s.shortcut(), QKeySequence(Qt::Key_Space));
+        QCOMPARE(s.fileNavigationKeys(), Settings::FileNavigationKeys::LeftRight);
         QVERIFY(s.closeOnFocusLoss());
         QVERIFY(!s.savedSize(SizeCategory::Image).has_value());
         QCOMPARE(s.autoSizeFraction(), 0.7);
@@ -55,6 +56,7 @@ private Q_SLOTS:
         Settings s(path());
         s.setSyncSelection(false);
         s.setShortcut(QKeySequence(u"Ctrl+Y"_s));
+        s.setFileNavigationKeys(Settings::FileNavigationKeys::UpDown);
         s.setSavedSize(SizeCategory::Video, QSize(1000, 600));
         s.setSavedSize(SizeCategory::Audio, QSize(420, 430));
         s.setVolume(0.33);
@@ -66,6 +68,7 @@ private Q_SLOTS:
         QCOMPARE(t.load(), Settings::LoadStatus::Ok);
         QVERIFY(!t.syncSelection());
         QCOMPARE(t.shortcut(), QKeySequence(u"Ctrl+Y"_s));
+        QCOMPARE(t.fileNavigationKeys(), Settings::FileNavigationKeys::UpDown);
         QCOMPARE(t.savedSize(SizeCategory::Video), std::optional<QSize>(QSize(1000, 600)));
         QCOMPARE(t.savedSize(SizeCategory::Audio), std::optional<QSize>(QSize(420, 430)));
         QVERIFY(!t.savedSize(SizeCategory::Image).has_value());
@@ -127,13 +130,14 @@ private Q_SLOTS:
 
     void invalidValuesFallBack()
     {
-        writeRaw(path(), R"({"schema":1,"general":{"syncSelection":"yes","shortcut":"Ctrl+Shift+A,B"},
+        writeRaw(path(), R"({"schema":1,"general":{"syncSelection":"yes","shortcut":"Ctrl+Shift+A,B","fileNavigationKeys":"diagonal"},
                          "window":{"sizes":{"image":{"w":0,"h":5},"video":{"w":"x"}}, "autoSizeFraction": 7},
                          "media":{"volume":-3}})");
         Settings s(path());
         QCOMPARE(s.load(), Settings::LoadStatus::Ok);
         QVERIFY(s.syncSelection()); // wrong type → default
         QCOMPARE(s.shortcut(), QKeySequence(Qt::Key_Space)); // multi-chord → default
+        QCOMPARE(s.fileNavigationKeys(), Settings::FileNavigationKeys::LeftRight);
         QVERIFY(!s.savedSize(SizeCategory::Image)); // too small
         QVERIFY(!s.savedSize(SizeCategory::Video)); // wrong type
         QCOMPARE(s.autoSizeFraction(), 0.7);
